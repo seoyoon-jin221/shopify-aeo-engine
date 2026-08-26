@@ -1,0 +1,17 @@
+{
+  "name": "@shopify-geo/core-engine",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "node dist/__tests__/scorer.test.js"
+  },
+  "dependencies": {
+    "@shopify-geo/shared-types": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

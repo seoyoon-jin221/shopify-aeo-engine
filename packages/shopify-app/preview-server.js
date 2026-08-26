@@ -1,0 +1,674 @@
+const http = require('http');
+
+const PORT = 3000;
+
+const htmlContent = `<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#FAFAFA] text-[#09090B] antialiased">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AEO Engine — Answer Engine Optimization for Shopify</title>
+  
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Geist Typography -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/core.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/mono.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['Geist Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Geist', -apple-system, sans-serif;
+      letter-spacing: -0.02em;
+    }
+    .font-mono-val {
+      font-family: 'Geist Mono', monospace;
+      letter-spacing: -0.04em;
+    }
+    .card-clean {
+      background: #FFFFFF;
+      border: 1px solid #E4E4E7;
+      border-radius: 12px;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+    }
+    .card-dark {
+      background: #121214;
+      border: 1px solid #27272A;
+      color: #FFFFFF;
+    }
+    .badge-pill {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 9999px;
+    }
+    .progress-smooth {
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.4s ease;
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col selection:bg-zinc-900 selection:text-white">
+
+  <!-- ========================================================================= -->
+  <!-- 1. PRISTINE SINGLE HEADER                                                 -->
+  <!-- ========================================================================= -->
+  <header class="bg-white border-b border-zinc-200 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30">
+    <div class="flex items-center space-x-3">
+      <div class="w-6 h-6 rounded bg-zinc-900 flex items-center justify-center font-mono-val font-bold text-xs text-white">
+        A
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="font-bold text-sm text-zinc-900 tracking-tight">AEO Engine</span>
+        <span class="text-zinc-300">/</span>
+        <span class="text-xs text-zinc-500 font-mono-val">quickstart-c01718bf</span>
+      </div>
+    </div>
+
+    <!-- Right Actions -->
+    <div class="flex items-center space-x-3">
+      <div id="autopilot-status-pill" class="flex items-center space-x-2 bg-zinc-100 px-2.5 py-1 rounded-full text-xs font-mono-val text-zinc-600 border border-zinc-200">
+        <span id="autopilot-dot" class="w-2 h-2 rounded-full bg-zinc-400"></span>
+        <span id="autopilot-label">Auto-Pilot: Inactive</span>
+      </div>
+
+      <div id="plan-badge-container">
+        <button onclick="openUpgradeModal()" id="btn-header-upgrade" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-semibold transition shadow-sm flex items-center space-x-1.5">
+          <i class="fa-solid fa-sparkles text-[10px]"></i>
+          <span>14-Day Free Trial • View Plans</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- 2. MAIN COCKPIT CONTAINER                                                 -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-6 py-8 space-y-8">
+
+    <!-- PLAN ACTIVATION CELEBRATION BANNER (Revealed on Upgrade) -->
+    <div id="banner-pro-active" class="hidden card-clean p-4 bg-emerald-50/80 border-emerald-200 flex items-center justify-between animate-fadeIn">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold shadow-sm">
+          ✓
+        </div>
+        <div>
+          <span id="banner-plan-title" class="font-bold text-xs text-emerald-950 block">Starter Pilot Active • 14-Day Free Trial</span>
+          <span id="banner-plan-sub" class="text-[11px] text-emerald-800 font-mono-val">10 Product Slots • 14 Days 100% Free ($10.00/mo thereafter) • Automated Schema Injection</span>
+        </div>
+      </div>
+      <span id="banner-plan-badge" class="px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-mono-val font-bold">
+        STARTER PILOT
+      </span>
+    </div>
+
+    <!-- HERO HEALTH & 1-CLICK AUTO-PILOT BANNER -->
+    <div class="card-clean p-6 sm:p-8 bg-gradient-to-b from-white to-zinc-50/50">
+      <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
+        
+        <!-- Score Overview -->
+        <div class="flex-1 space-y-2 text-center lg:text-left">
+          <div class="flex items-center justify-center lg:justify-start space-x-2">
+            <span class="text-xs font-mono-val uppercase tracking-wider text-zinc-400 font-bold">AI Citation Readiness Score</span>
+            <span id="hero-badge" class="badge-pill bg-amber-50 text-amber-800 border border-amber-200">
+              Needs Optimization
+            </span>
+          </div>
+          
+          <div class="flex items-baseline justify-center lg:justify-start space-x-2">
+            <span id="hero-score" class="text-4xl sm:text-5xl font-extrabold font-mono-val text-zinc-900">44</span>
+            <span class="text-zinc-400 font-mono-val text-sm">/ 100</span>
+            <span id="score-delta" class="text-xs font-mono-val font-semibold text-zinc-400">Baseline</span>
+          </div>
+
+          <p id="hero-desc" class="text-xs text-zinc-500 max-w-md">
+            4 of 5 products lack verified return policies & clinical claims. Conversational models (ChatGPT, Perplexity) recommend competitors (COSRX, Round Lab) first.
+          </p>
+        </div>
+
+        <!-- 1-Click Primary Action -->
+        <div class="shrink-0 text-center space-y-2.5">
+          <button onclick="activateAutoPilot()" id="btn-activate-pilot" class="px-6 py-3.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-sm font-semibold tracking-tight transition shadow-lg flex items-center space-x-2.5 mx-auto">
+            <i class="fa-solid fa-wand-magic-sparkles text-emerald-400 text-base"></i>
+            <span id="btn-pilot-text">Activate Auto-Pilot (14 Days Free)</span>
+          </button>
+          
+          <div class="flex items-center justify-center space-x-3 text-[11px] font-mono-val text-zinc-500">
+            <span>Instant GraphQL Sync</span>
+            <span>•</span>
+            <button onclick="simulateNewProductAddition()" class="text-emerald-700 hover:text-emerald-800 underline font-semibold">
+              <i class="fa-solid fa-plus-circle mr-1"></i>Simulate Adding SKU #11
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Progress Bar Indicator -->
+      <div class="mt-8 pt-6 border-t border-zinc-200">
+        <div class="flex items-center justify-between text-xs font-mono-val mb-2">
+          <span class="text-zinc-500" id="progress-status-label">Catalog Optimization Status</span>
+          <span id="progress-text" class="font-bold text-zinc-900">0 of 5 Products Protected (0%)</span>
+        </div>
+        <div class="w-full bg-zinc-100 rounded-full h-2 overflow-hidden">
+          <div id="progress-bar" class="bg-amber-500 h-2 rounded-full progress-smooth" style="width: 15%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DYNAMIC ENTITY DIAGNOSTIC & TRANSFORMATION PANEL -->
+    <div id="panel-entity-diagnostic" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 id="panel-heading" class="font-bold text-sm text-zinc-900">Active Entity Diagnostics & Citation Gaps</h3>
+        <span id="panel-subheading" class="text-xs text-zinc-400 font-mono-val">5 Products Monitored</span>
+      </div>
+
+      <!-- STATE 1: BEFORE OPTIMIZATION (Shown initially) -->
+      <div id="card-state-before" class="card-clean p-6 border-l-4 border-l-rose-500 space-y-5 animate-fadeIn">
+        <div class="flex items-center justify-between border-b border-zinc-200 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="badge-pill bg-rose-50 text-rose-700 border border-rose-200">UNPROTECTED</span>
+            <span class="text-xs font-bold text-zinc-900">Why ChatGPT & Perplexity Skip Your Products:</span>
+          </div>
+          <span class="text-xs font-mono-val text-zinc-400">Default Shopify Metadata</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div class="p-3.5 bg-zinc-50 rounded-lg border border-zinc-200 space-y-1">
+            <span class="text-rose-600 font-bold block text-[11px] font-mono-val">✕ MISSING RETURN POLICY</span>
+            <p class="text-zinc-600 text-[11px] leading-normal">
+              AI crawlers require verified <code class="font-mono-val bg-white px-1 rounded">MerchantReturnPolicy</code> schemas before recommending transactions.
+            </p>
+          </div>
+
+          <div class="p-3.5 bg-zinc-50 rounded-lg border border-zinc-200 space-y-1">
+            <span class="text-rose-600 font-bold block text-[11px] font-mono-val">✕ NO ACTIVE SPEC PROPERTIES</span>
+            <p class="text-zinc-600 text-[11px] leading-normal">
+              Missing % concentrations (80% Centella) & non-comedogenic ratings in structured JSON-LD.
+            </p>
+          </div>
+
+          <div class="p-3.5 bg-zinc-50 rounded-lg border border-zinc-200 space-y-1">
+            <span class="text-rose-600 font-bold block text-[11px] font-mono-val">✕ ZERO FAQ RETRIEVAL CHUNKS</span>
+            <p class="text-zinc-600 text-[11px] leading-normal">
+              Storefront lacks high-information-gain Q&A accordions answering buyer comparison queries.
+            </p>
+          </div>
+        </div>
+
+        <div class="p-3.5 bg-rose-50/60 rounded-lg border border-rose-200 flex items-center justify-between text-xs font-mono-val">
+          <span class="text-rose-800 font-semibold">Current Citation Result: Ranked #4 behind COSRX & Round Lab</span>
+          <button onclick="activateAutoPilot()" class="text-zinc-900 hover:text-black font-bold underline">Fix Now (Free 14 Days) →</button>
+        </div>
+      </div>
+
+      <!-- STATE 2: AFTER OPTIMIZATION (Revealed dynamically after 1-Click action) -->
+      <div id="card-state-after" class="hidden card-clean p-6 border-l-4 border-l-emerald-600 space-y-5 animate-fadeIn">
+        <div class="flex items-center justify-between border-b border-zinc-200 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="badge-pill bg-emerald-50 text-emerald-800 border border-emerald-200">AUTO-PILOT ACTIVE</span>
+            <span class="text-xs font-bold text-zinc-900">Protected Entity Graph & Storefront Injections</span>
+          </div>
+          <span class="text-xs font-mono-val text-emerald-700 font-semibold">● Last Synced: Just now</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div class="p-3.5 bg-emerald-50/40 rounded-lg border border-emerald-200 space-y-1">
+            <span class="text-emerald-700 font-bold block text-[11px] font-mono-val">✓ VERIFIED RETURN POLICY</span>
+            <p class="text-zinc-700 text-[11px] leading-normal">
+              Injected 30-day money-back guarantee & free return schema directly into GraphQL metafields.
+            </p>
+          </div>
+
+          <div class="p-3.5 bg-emerald-50/40 rounded-lg border border-emerald-200 space-y-1">
+            <span class="text-emerald-700 font-bold block text-[11px] font-mono-val">✓ CLINICAL & ACTIVE SPECS</span>
+            <p class="text-zinc-700 text-[11px] leading-normal">
+              Structured <code class="font-mono-val bg-white px-1 rounded">additionalProperty</code> graphs for 80% Centella, pH 5.5, and non-comedogenic tests.
+            </p>
+          </div>
+
+          <div class="p-3.5 bg-emerald-50/40 rounded-lg border border-emerald-200 space-y-1">
+            <span class="text-emerald-700 font-bold block text-[11px] font-mono-val">✓ HIGH-INFO FAQ ACCORDION</span>
+            <p class="text-zinc-700 text-[11px] leading-normal">
+              Active Liquid Theme App Block (<code class="font-mono-val bg-white px-1 rounded">geo-faq.liquid</code>) answering conversational buyer queries.
+            </p>
+          </div>
+        </div>
+
+        <!-- Ongoing Sentinel Schedule Box -->
+        <div class="p-4 bg-zinc-900 text-white rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono-val">
+          <div class="flex items-center space-x-3">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <div>
+              <span class="font-bold text-zinc-100 block">Automated Ongoing Drift Sentinel Running</span>
+              <span class="text-zinc-400 text-[11px]">Real-time sync on new product additions • Next weekly health check in 6 days</span>
+            </div>
+          </div>
+          <span class="text-emerald-400 font-semibold text-xs">Citation Position: #1 Guaranteed</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIVE COMPETITOR CITATION LEADERBOARD -->
+    <div id="section-competitor-matrix" class="card-clean p-6 space-y-5">
+      <div class="flex items-center justify-between border-b border-zinc-200 pb-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <h3 class="font-bold text-sm text-zinc-900">Live AI Search Citation Leaderboard</h3>
+            <span id="badge-grounding" class="badge-pill bg-zinc-100 text-zinc-700 border border-zinc-200">Real-Time Search Grounding</span>
+          </div>
+          <p class="text-xs text-zinc-500 mt-0.5">Simulated across 10,000 conversational buyer prompts in Perplexity, ChatGPT Search, and Gemini.</p>
+        </div>
+        <span class="text-xs font-mono-val text-zinc-400">Niche: K-Beauty Barrier Skincare</span>
+      </div>
+
+      <!-- Leaderboard Rows -->
+      <div class="divide-y divide-zinc-200 text-xs">
+        
+        <!-- Your Store -->
+        <div id="row-your-store" class="py-3.5 flex items-center justify-between -mx-6 px-6 rounded-lg transition-colors duration-500">
+          <div class="flex items-center space-x-3">
+            <span id="rank-your-store" class="w-6 h-6 rounded-full bg-zinc-200 text-zinc-700 font-mono-val font-bold flex items-center justify-center text-xs shadow-sm">4</span>
+            <div>
+              <span class="font-bold text-zinc-900 block text-xs">Your Store: Centella Calming Barrier Serum (Seoul Glow)</span>
+              <span id="status-your-store" class="text-[11px] text-zinc-400 font-mono-val">Missing Return Policy & Clinical Specs</span>
+            </div>
+          </div>
+          <div class="text-right font-mono-val">
+            <span id="score-your-store" class="text-sm font-bold text-zinc-700">44 / 100</span>
+            <span id="share-your-store" class="block text-[10px] text-zinc-400">Citation Share: 28%</span>
+          </div>
+        </div>
+
+        <!-- Competitor 1: COSRX -->
+        <div class="py-3.5 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <span class="w-6 h-6 rounded-full bg-zinc-100 text-zinc-600 font-mono-val font-bold flex items-center justify-center text-xs">1</span>
+            <div>
+              <span class="font-semibold text-zinc-800 block text-xs">COSRX: Advanced Snail 96 Mucin Power Essence</span>
+              <span class="text-[11px] text-zinc-400 font-mono-val">Missing MerchantReturnPolicy entity</span>
+            </div>
+          </div>
+          <div class="text-right font-mono-val">
+            <span class="text-sm font-bold text-zinc-700">74 / 100</span>
+            <span class="block text-[10px] text-zinc-400">Citation Share: 62%</span>
+          </div>
+        </div>
+
+        <!-- Competitor 2: Round Lab -->
+        <div class="py-3.5 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <span class="w-6 h-6 rounded-full bg-zinc-100 text-zinc-600 font-mono-val font-bold flex items-center justify-center text-xs">2</span>
+            <div>
+              <span class="font-semibold text-zinc-800 block text-xs">Round Lab: 1025 Dokdo Toner</span>
+              <span class="text-[11px] text-zinc-400 font-mono-val">Missing High-Info FAQ Accordion Schema</span>
+            </div>
+          </div>
+          <div class="text-right font-mono-val">
+            <span class="text-sm font-bold text-zinc-700">68 / 100</span>
+            <span class="block text-[10px] text-zinc-400">Citation Share: 45%</span>
+          </div>
+        </div>
+
+        <!-- Competitor 3: Beauty of Joseon -->
+        <div class="py-3.5 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <span class="w-6 h-6 rounded-full bg-zinc-100 text-zinc-600 font-mono-val font-bold flex items-center justify-center text-xs">3</span>
+            <div>
+              <span class="font-semibold text-zinc-800 block text-xs">Beauty of Joseon: Relief Sun Rice + Probiotics</span>
+              <span class="text-[11px] text-zinc-400 font-mono-val">Missing verified clinical claim properties</span>
+            </div>
+          </div>
+          <div class="text-right font-mono-val">
+            <span class="text-sm font-bold text-zinc-700">54 / 100</span>
+            <span class="block text-[10px] text-zinc-400">Citation Share: 31%</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 3-TIER PRICING SHOWCASE BANNER -->
+    <div class="space-y-4 pt-2">
+      <div class="flex items-center justify-between">
+        <div>
+          <h4 class="font-bold text-sm text-zinc-900">Subscription Plans & 14-Day Risk-Free Trial</h4>
+          <p class="text-xs text-zinc-500">Every plan includes 14 days 100% free with automated Shopify recurring billing.</p>
+        </div>
+        <span class="text-xs font-mono-val text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+          All Plans: 14 Days Free
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        <!-- TIER 1: STARTER PILOT ($10.00/mo) -->
+        <div class="card-clean p-5 flex flex-col justify-between space-y-4 hover:border-zinc-400 transition">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="badge-pill bg-zinc-100 text-zinc-700 border border-zinc-200">ENTRY</span>
+              <span class="text-[11px] font-mono-val font-bold text-zinc-500">14 Days Free</span>
+            </div>
+            
+            <div>
+              <h5 class="text-sm font-bold text-zinc-900">Starter Pilot</h5>
+              <p class="text-[11px] text-zinc-500 mt-0.5">Core AEO for small boutiques.</p>
+            </div>
+
+            <div class="flex items-baseline space-x-1 font-mono-val">
+              <span class="text-2xl font-extrabold text-zinc-900">$10</span>
+              <span class="text-zinc-500 text-xs">/ mo</span>
+            </div>
+
+            <ul class="space-y-1.5 text-[11px] text-zinc-600 pt-2 font-sans border-t border-zinc-100">
+              <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-600 mt-0.5"></i><span><strong>10 Products Protected</strong></span></li>
+              <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-600 mt-0.5"></i><span>Single-Engine Simulation</span></li>
+              <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-600 mt-0.5"></i><span>RAG Schema & FAQ Injection</span></li>
+            </ul>
+          </div>
+
+          <button onclick="selectTier('STARTER')" class="w-full py-2 bg-white hover:bg-zinc-50 border border-zinc-300 text-zinc-900 rounded-lg text-xs font-bold transition shadow-sm">
+            Start 14-Day Free Trial ($10/mo)
+          </button>
+        </div>
+
+        <!-- TIER 2: GROWTH PILOT ($59.99/mo) -->
+        <div class="card-clean p-5 flex flex-col justify-between space-y-4 border-2 border-zinc-900 relative shadow-sm">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="badge-pill bg-zinc-900 text-white">POPULAR</span>
+              <span class="text-[11px] font-mono-val font-bold text-emerald-600 uppercase">Most Popular</span>
+            </div>
+            
+            <div>
+              <h5 class="text-sm font-bold text-zinc-900">Growth Pilot</h5>
+              <p class="text-[11px] text-zinc-500 mt-0.5">Autopilot for growing D2C brands.</p>
+            </div>
+
+            <div class="flex items-baseline space-x-1 font-mono-val">
+              <span class="text-2xl font-extrabold text-zinc-900">$59.99</span>
+              <span class="text-zinc-500 text-xs">/ mo</span>
+            </div>
+
+            <ul class="space-y-1.5 text-[11px] text-zinc-600 pt-2 font-sans border-t border-zinc-100">
+              <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-600 mt-0.5"></i><span><strong>50 Products Protected</strong></span></li>
+              <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-600 mt-0.5"></i><span><strong>Dual-Engine</strong> (GPT + Perplexity)</span></li>
+              <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-600 mt-0.5"></i><span>Weekly Citation Drift Sentinel</span></li>
+            </ul>
+          </div>
+
+          <button onclick="selectTier('GROWTH')" class="w-full py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-bold transition shadow-sm">
+            Start 14-Day Free Trial ($59.99/mo)
+          </button>
+        </div>
+
+        <!-- TIER 3: SCALE DOMINANCE ($199.99/mo) -->
+        <div class="card-dark p-5 rounded-xl flex flex-col justify-between space-y-4 shadow-md">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="badge-pill bg-emerald-950 text-emerald-300 border border-emerald-800">SCALE</span>
+              <span class="text-[11px] font-mono-val font-bold text-emerald-400">Enterprise</span>
+            </div>
+            
+            <div>
+              <h5 class="text-sm font-bold text-white">Scale Dominance</h5>
+              <p class="text-[11px] text-zinc-400 mt-0.5">Total citation dominance.</p>
+            </div>
+
+            <div class="flex items-baseline space-x-1 font-mono-val">
+              <span class="text-2xl font-extrabold text-white">$199.99</span>
+              <span class="text-zinc-400 text-xs">/ mo</span>
+            </div>
+
+            <ul class="space-y-1.5 text-[11px] text-zinc-300 pt-2 font-sans border-t border-zinc-800">
+              <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-400 mt-0.5"></i><span><strong>Unlimited Products</strong></span></li>
+              <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-400 mt-0.5"></i><span><strong>Tri-Engine</strong> (GPT + Perplexity + Gemini)</span></li>
+              <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-400 mt-0.5"></i><span>10-Rival Custom Watchlist</span></li>
+            </ul>
+          </div>
+
+          <button onclick="selectTier('SCALE')" class="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded-lg text-xs font-extrabold transition shadow">
+            Start 14-Day Free Trial ($199.99/mo)
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- 3. 3-TIER UPGRADE MODAL                                                   -->
+  <!-- ========================================================================= -->
+  <div id="modal-upgrade" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-3xl w-full border border-zinc-200 shadow-2xl p-6 sm:p-8 space-y-6 text-xs animate-scale">
+      <div class="flex items-center justify-between border-b border-zinc-200 pb-4">
+        <div>
+          <span class="badge-pill bg-emerald-50 text-emerald-800 border border-emerald-200 mb-1 inline-block">14-Day Free Trial on All Plans</span>
+          <h3 class="text-base font-bold text-zinc-900">Select Your AEO Engine Subscription</h3>
+        </div>
+        <button onclick="closeUpgradeModal()" class="text-zinc-400 hover:text-zinc-700 text-sm font-mono-val">✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        <!-- Starter in Modal -->
+        <div class="p-4 rounded-xl border border-zinc-200 flex flex-col justify-between space-y-3 bg-zinc-50/50">
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-zinc-900 font-sans text-xs">Starter Pilot</span>
+              <span class="text-xs font-extrabold text-zinc-900 font-mono-val">$10/mo</span>
+            </div>
+            <p class="text-[11px] text-zinc-500">10 products protected with 14-day free trial.</p>
+          </div>
+          <button onclick="confirmTierUpgrade('STARTER')" class="w-full py-2 border border-zinc-300 hover:bg-zinc-100 text-zinc-900 rounded-lg font-bold text-xs">
+            Start Trial ($10/mo)
+          </button>
+        </div>
+
+        <!-- Growth in Modal -->
+        <div class="p-4 rounded-xl border-2 border-zinc-900 flex flex-col justify-between space-y-3 bg-white">
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-zinc-900 font-sans text-xs">Growth Pilot</span>
+              <span class="text-xs font-extrabold text-zinc-900 font-mono-val">$59.99/mo</span>
+            </div>
+            <p class="text-[11px] text-zinc-500">50 products, dual-engine, & weekly drift alerts.</p>
+          </div>
+          <button onclick="confirmTierUpgrade('GROWTH')" class="w-full py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg font-bold text-xs">
+            Start Trial ($59.99/mo)
+          </button>
+        </div>
+
+        <!-- Scale in Modal -->
+        <div class="p-4 rounded-xl border-2 border-emerald-500 flex flex-col justify-between space-y-3 bg-emerald-50/30">
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-zinc-900 font-sans text-xs">Scale Dominance</span>
+              <span class="text-xs font-extrabold text-emerald-700 font-mono-val">$199.99/mo</span>
+            </div>
+            <p class="text-[11px] text-zinc-500">Unlimited SKUs, tri-engine, & 10 rival watchlists.</p>
+          </div>
+          <button onclick="confirmTierUpgrade('SCALE')" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs">
+            Start Trial ($199.99/mo)
+          </button>
+        </div>
+
+      </div>
+
+      <p class="text-[11px] text-zinc-400 text-center font-mono-val">
+        All plans billed via Shopify Invoice after 14-day trial • Cancel anytime in Shopify App settings
+      </p>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 bg-zinc-900 text-white px-4 py-2.5 rounded-lg shadow-xl text-xs font-mono-val flex items-center space-x-2 border border-zinc-700 hidden">
+    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+    <span id="toast-msg">Action completed.</span>
+  </div>
+
+  <!-- Controller Logic -->
+  <script>
+    let isAutoPilotActive = false;
+    let activePlan = 'FREE_TRIAL';
+
+    function activateAutoPilot() {
+      if (isAutoPilotActive) return;
+      
+      const btn = document.getElementById('btn-activate-pilot');
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i><span>Synchronizing Schemas...</span>';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        isAutoPilotActive = true;
+
+        // 1. Update Hero Card
+        document.getElementById('hero-score').innerText = '94';
+        document.getElementById('hero-score').className = 'text-4xl sm:text-5xl font-extrabold font-mono-val text-emerald-600';
+        document.getElementById('score-delta').innerText = '+50 pts';
+        document.getElementById('score-delta').className = 'text-xs font-mono-val font-bold text-emerald-600';
+        document.getElementById('hero-badge').innerText = 'Auto-Pilot Active (Top 5%)';
+        document.getElementById('hero-badge').className = 'badge-pill bg-emerald-50 text-emerald-800 border border-emerald-200';
+        document.getElementById('hero-desc').innerText = 'All 5 catalog items are protected with verified return policies, clinical specs, and storefront FAQ accordions.';
+
+        // 2. Update Primary Action Button
+        btn.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400 text-base"></i><span>Auto-Pilot Running (14 Days Free)</span>';
+        btn.className = 'px-6 py-3.5 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-xl text-sm font-semibold tracking-tight transition shadow-lg flex items-center space-x-2.5 mx-auto';
+
+        // 3. Update Progress Bar
+        document.getElementById('progress-text').innerText = '5 of 10 Products Protected (14-Day Free Trial)';
+        document.getElementById('progress-bar').style.width = '50%';
+        document.getElementById('progress-bar').className = 'bg-emerald-500 h-2 rounded-full progress-smooth';
+
+        // 4. Update Header Status Pill
+        document.getElementById('autopilot-dot').className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+        document.getElementById('autopilot-label').innerText = 'Auto-Pilot: Active';
+        document.getElementById('autopilot-status-pill').className = 'flex items-center space-x-2 bg-emerald-50 px-2.5 py-1 rounded-full text-xs font-mono-val text-emerald-800 border border-emerald-200';
+
+        // 5. Dynamic Transformation
+        document.getElementById('card-state-before').classList.add('hidden');
+        document.getElementById('card-state-after').classList.remove('hidden');
+        document.getElementById('panel-heading').innerText = 'Active Entity Protection & Injected Schemas';
+
+        // 6. Update Leaderboard
+        const yourStoreRow = document.getElementById('row-your-store');
+        yourStoreRow.className = 'py-3.5 flex items-center justify-between bg-emerald-50/60 -mx-6 px-6 rounded-lg border-l-4 border-l-emerald-600 transition-colors duration-500';
+        document.getElementById('rank-your-store').className = 'w-6 h-6 rounded-full bg-emerald-600 text-white font-mono-val font-bold flex items-center justify-center text-xs shadow-sm';
+        document.getElementById('rank-your-store').innerText = '1';
+        document.getElementById('status-your-store').innerText = 'RAG Schema Injected • 100% Citation Confidence • Live on Theme';
+        document.getElementById('status-your-store').className = 'text-[11px] text-emerald-800 font-mono-val';
+        document.getElementById('score-your-store').innerText = '94 / 100';
+        document.getElementById('score-your-store').className = 'text-sm font-extrabold text-emerald-700';
+        document.getElementById('share-your-store').innerText = 'Citation Share: 88%';
+        document.getElementById('share-your-store').className = 'block text-[10px] text-emerald-800 font-semibold uppercase';
+
+        showToast('🎉 14-Day Free Trial active! All 5 products optimized with RAG schema.');
+      }, 600);
+    }
+
+    function simulateNewProductAddition() {
+      showToast('Shopify Webhook (products/create) fired: "Glow Niacinamide Serum" added to store.');
+
+      setTimeout(() => {
+        if (activePlan === 'STARTER' || activePlan === 'FREE_TRIAL') {
+          document.getElementById('progress-text').innerText = '10 of 10 Products Protected (Starter Capacity Reached)';
+          document.getElementById('progress-bar').style.width = '100%';
+          document.getElementById('progress-bar').className = 'bg-amber-500 h-2 rounded-full progress-smooth';
+
+          openUpgradeModal();
+          showToast('⚠️ Starter Capacity (10/10) reached. Upgrade to Growth Pilot ($59.99/mo) for 50 SKUs.');
+        } else {
+          document.getElementById('progress-text').innerText = '11 Products Protected (Auto-Pilot Synced)';
+          showToast('✅ Auto-Pilot automatically generated RAG schema & FAQs for SKU #11!');
+        }
+      }, 1000);
+    }
+
+    function selectTier(tier) {
+      confirmTierUpgrade(tier);
+    }
+
+    function openUpgradeModal() {
+      document.getElementById('modal-upgrade').classList.remove('hidden');
+    }
+
+    function closeUpgradeModal() {
+      document.getElementById('modal-upgrade').classList.add('hidden');
+    }
+
+    function confirmTierUpgrade(tier) {
+      closeUpgradeModal();
+      activePlan = tier;
+
+      const titles = {
+        STARTER: 'Starter Pilot ($10.00/mo)',
+        GROWTH: 'Growth Pilot ($59.99/mo)',
+        SCALE: 'Scale Dominance ($199.99/mo)'
+      };
+
+      const subs = {
+        STARTER: '10 Product Slots • 14 Days Free ($10.00/mo thereafter) • Schema Injection',
+        GROWTH: '50 Product Slots • Dual-Engine (ChatGPT + Perplexity) • Weekly Drift Alerts',
+        SCALE: 'Unlimited Products • Tri-Engine (GPT + Perplexity + Gemini) • Custom 10-Rival Watchlist'
+      };
+
+      const badges = {
+        STARTER: 'STARTER PILOT ($10/mo)',
+        GROWTH: 'GROWTH PILOT ($59.99/mo)',
+        SCALE: 'SCALE DOMINANCE ($199.99/mo)'
+      };
+
+      document.getElementById('banner-plan-title').innerText = titles[tier] + ' Active • 14-Day Free Trial';
+      document.getElementById('banner-plan-sub').innerText = subs[tier];
+      document.getElementById('banner-plan-badge').innerText = tier;
+
+      // Header status pill
+      document.getElementById('plan-badge-container').innerHTML = '<span class="px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-mono-val font-bold border border-emerald-200 flex items-center space-x-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span><span>' + badges[tier] + '</span></span>';
+      
+      document.getElementById('banner-pro-active').classList.remove('hidden');
+      activateAutoPilot();
+
+      showToast('🎉 ' + titles[tier] + ' Activated with 14-Day Free Trial!');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      document.getElementById('toast-msg').innerText = msg;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 3500);
+    }
+  </script>
+</body>
+</html>
+`;
+
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(htmlContent);
+});
+
+server.listen(PORT, () => {
+  console.log(`🚀 AEO Engine with $10 / $59.99 / $199.99 Pricing running at: http://localhost:${PORT}`);
+});

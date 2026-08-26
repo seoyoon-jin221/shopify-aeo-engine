@@ -1,0 +1,38 @@
+{% comment %}
+  GEO Engine - High-Information-Gain FAQ Accordion Section Block
+  Provides rich snippet text and crawlable answers for AI Search Bots (GPTBot, PerplexityBot).
+{% endcomment %}
+
+{% if product.metafields.geo_engine.faq_data != blank %}
+  <div class="geo-faq-container" style="margin: 2rem 0; padding: 1.5rem; border: 1px solid #e1e3e5; border-radius: 8px; font-family: inherit;">
+    <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;">{{ block.settings.heading | default: "Frequently Asked Questions & AI Search Insights" }}</h3>
+    <div class="geo-faq-list">
+      {% assign faqs = product.metafields.geo_engine.faq_data.value %}
+      {% for item in faqs %}
+        <details style="margin-bottom: 0.75rem; padding: 0.75rem; background-color: #f9fafb; border-radius: 6px; cursor: pointer;">
+          <summary style="font-weight: 500; outline: none; list-style: none;">
+            <strong>Q: {{ item.question }}</strong>
+          </summary>
+          <div style="margin-top: 0.5rem; color: #374151; font-size: 0.95rem; line-height: 1.5;">
+            {{ item.answer }}
+          </div>
+        </details>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "GEO FAQ Accordion",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Accordion Heading",
+      "default": "Frequently Asked Questions & Product Insights"
+    }
+  ]
+}
+{% endschema %}

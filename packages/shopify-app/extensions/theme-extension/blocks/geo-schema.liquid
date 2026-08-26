@@ -1,0 +1,22 @@
+{% comment %}
+  GEO Engine - RAG-Optimized JSON-LD Schema App Block
+  Auto-injected into {{ content_for_header }} without modifying underlying theme liquid files.
+{% endcomment %}
+
+{% if product.metafields.geo_engine.structured_data != blank %}
+  <script type="application/ld+json">
+    {% if product.metafields.geo_engine.structured_data.value %}
+      {{ product.metafields.geo_engine.structured_data.value }}
+    {% else %}
+      {{ product.metafields.geo_engine.structured_data }}
+    {% endif %}
+  </script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "GEO AI Search Schema",
+  "target": "head",
+  "settings": []
+}
+{% endschema %}

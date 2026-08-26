@@ -1,0 +1,47 @@
+[
+  {
+    "brand": "Anua Skincare",
+    "domain": "anua.us",
+    "contact": "founder@anua.us",
+    "niche": "Heartleaf 77% Soothing Toner",
+    "competitor": "COSRX",
+    "baselineScore": 48,
+    "missingGaps": ["Clinical barrier claims", "FAQ entity accordion"]
+  },
+  {
+    "brand": "Beauty of Joseon",
+    "domain": "beautyofjoseon.com",
+    "contact": "marketing@beautyofjoseon.com",
+    "niche": "Relief Sun Rice + Probiotics",
+    "competitor": "Round Lab",
+    "baselineScore": 54,
+    "missingGaps": ["Merchant return policy schema", "Usage routine snippet"]
+  },
+  {
+    "brand": "Skin1004",
+    "domain": "skin1004.com",
+    "contact": "partnerships@skin1004.com",
+    "niche": "Madagascar Centella Ampoule",
+    "competitor": "Torriden",
+    "baselineScore": 42,
+    "missingGaps": ["Full active ingredient breakdown", "Comparison Q&A"]
+  },
+  {
+    "brand": "Torriden",
+    "domain": "torriden.com",
+    "contact": "hello@torriden.com",
+    "niche": "Dive-In Low Molecule Hyaluronic Acid Serum",
+    "competitor": "K-Hydra",
+    "baselineScore": 51,
+    "missingGaps": ["RAG JSON-LD rich graph", "Non-comedogenic certification"]
+  },
+  {
+    "brand": "Mixsoon",
+    "domain": "mixsoon.us",
+    "contact": "info@mixsoon.us",
+    "niche": "Bean Essence",
+    "competitor": "COSRX Snail Mucin",
+    "baselineScore": 39,
+    "missingGaps": ["Texture & fermentation specs", "ChatGPT buyer Q&A"]
+  }
+]

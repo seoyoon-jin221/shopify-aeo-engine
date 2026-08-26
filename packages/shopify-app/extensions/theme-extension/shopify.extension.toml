@@ -1,0 +1,13 @@
+name = "GEO Schema & FAQ Blocks"
+type = "theme"
+uid = "7f3d4944-6be2-ef7f-154b-8c384463d4b705563329"
+
+[[blocks]]
+name = "AI Search JSON-LD Schema"
+target = "head"
+template = "blocks/geo-schema.liquid"
+
+[[blocks]]
+name = "High-Information-Gain FAQ"
+target = "section"
+template = "blocks/geo-faq.liquid"

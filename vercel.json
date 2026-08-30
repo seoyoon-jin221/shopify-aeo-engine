@@ -16,6 +16,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/audit",
+      "destination": "/api/audit"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

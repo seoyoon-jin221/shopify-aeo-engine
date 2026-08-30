@@ -1,5 +1,6 @@
 export * from './simulation/simulator';
 export * from './simulation/multi-engine-search';
+export * from './simulation/matrix-engine';
 export * from './scoring/scorer';
 export * from './generator/schema-generator';
 export * from './generator/faq-generator';

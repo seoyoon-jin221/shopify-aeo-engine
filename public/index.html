@@ -78,14 +78,14 @@
       <div class="flex items-center space-x-2">
         <span class="font-bold text-sm text-zinc-900 tracking-tight">AEO Engine</span>
         <span class="text-zinc-300">/</span>
-        <span id="header-shop-domain" class="text-xs text-zinc-500 font-mono-val">loading store...</span>
+        <span id="header-shop-domain" class="text-xs text-zinc-500 font-mono-val">quickstart-c01718bf</span>
       </div>
     </div>
 
     <!-- Right Actions -->
     <div class="flex items-center space-x-3">
-      <button onclick="resetStoreState()" title="Re-scan Catalog" class="text-xs font-mono-val text-zinc-400 hover:text-zinc-700 transition px-2 py-1 rounded">
-        <i class="fa-solid fa-arrows-rotate mr-1"></i>Re-scan
+      <button onclick="resetStoreState()" title="Start Fresh Scan" class="text-xs font-mono-val text-zinc-500 hover:text-zinc-900 transition px-2.5 py-1 rounded border border-zinc-200 hover:border-zinc-300 bg-white">
+        <i class="fa-solid fa-arrows-rotate mr-1 text-zinc-400"></i><span>Start Fresh Scan</span>
       </button>
 
       <div id="autopilot-status-pill" class="flex items-center space-x-2 bg-zinc-100 px-2.5 py-1 rounded-full text-xs font-mono-val text-zinc-600 border border-zinc-200">
@@ -103,12 +103,12 @@
   </header>
 
   <!-- ========================================================================= -->
-  <!-- 2. MAIN COCKPIT CONTAINER                                                 -->
+  <!-- 2. MAIN CONTAINER                                                         -->
   <!-- ========================================================================= -->
   <main class="flex-1 max-w-5xl w-full mx-auto px-6 py-8 space-y-8">
 
     <!-- ======================================================================= -->
-    <!-- VIEW 0: FIRST-TIME WELCOME & ONBOARDING SCAN (Shown on first install)   -->
+    <!-- VIEW 0: FIRST-TIME ONBOARDING & LIVE SCAN TRIGGER (Default First-Time) -->
     <!-- ======================================================================= -->
     <div id="view-onboarding" class="card-clean p-8 sm:p-12 text-center space-y-6 bg-gradient-to-b from-white to-zinc-50/50">
       <div class="w-16 h-16 rounded-2xl bg-zinc-900 text-white flex items-center justify-center text-2xl mx-auto shadow-lg">
@@ -116,24 +116,28 @@
       </div>
 
       <div class="max-w-lg mx-auto space-y-2">
+        <div class="inline-flex items-center space-x-2 badge-pill bg-emerald-50 text-emerald-800 border border-emerald-200 mb-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+          <span>First-Time Setup</span>
+        </div>
         <h2 class="text-2xl font-extrabold text-zinc-900 tracking-tight">
-          Welcome to AEO Engine for <span id="onboarding-store-name" class="text-emerald-700 font-mono-val">Your Store</span>
+          Welcome to AEO Engine for <span id="onboarding-store-name" class="text-emerald-700 font-mono-val">quickstart-c01718bf</span>
         </h2>
         <p class="text-xs text-zinc-500 leading-relaxed">
-          AI search engines like ChatGPT, Perplexity, and Google Gemini recommend products by analyzing structured entity graphs and verified return policies. Let's run your store's first baseline AI citation audit.
+          AI search engines like ChatGPT, Perplexity, and Google Gemini cite stores with verified return policy schemas and rich structured data. Let's run your store's first AI search readiness audit.
         </p>
       </div>
 
       <!-- Scan Action Button -->
-      <div class="pt-2">
-        <button onclick="startCatalogScan()" id="btn-start-scan" class="px-8 py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-sm font-semibold tracking-tight transition shadow-xl inline-flex items-center space-x-3">
+      <div id="scan-btn-container" class="pt-2">
+        <button onclick="startCatalogScan()" id="btn-start-scan" class="px-8 py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-sm font-semibold tracking-tight transition shadow-xl inline-flex items-center space-x-3 cursor-pointer">
           <i class="fa-solid fa-bolt text-emerald-400"></i>
           <span>Scan Store Catalog & Generate AI Audit</span>
         </button>
-        <p class="text-[11px] font-mono-val text-zinc-400 mt-2">Zero impact on storefront speed • Reads public product metadata</p>
+        <p class="text-[11px] font-mono-val text-zinc-400 mt-2">Zero theme modifications • Reads public product catalog metadata</p>
       </div>
 
-      <!-- Live Scan Progress Indicator (Hidden initially) -->
+      <!-- Live Scan Progress Indicator (Revealed during scan) -->
       <div id="scan-progress-box" class="max-w-md mx-auto card-clean p-5 space-y-4 text-left hidden animate-fadeIn">
         <div class="flex items-center justify-between text-xs font-mono-val">
           <span id="scan-step-title" class="font-bold text-zinc-800 flex items-center">
@@ -437,7 +441,7 @@
               </ul>
             </div>
 
-            <button onclick="selectTier('STARTER')" class="w-full py-2 bg-white hover:bg-zinc-50 border border-zinc-300 text-zinc-900 rounded-lg text-xs font-bold transition shadow-sm">
+            <button onclick="selectTier('STARTER')" class="w-full py-2 bg-white hover:bg-zinc-50 border border-zinc-300 text-zinc-900 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer">
               Start 14-Day Free Trial ($10/mo)
             </button>
           </div>
@@ -467,7 +471,7 @@
               </ul>
             </div>
 
-            <button onclick="selectTier('GROWTH')" class="w-full py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-bold transition shadow-sm">
+            <button onclick="selectTier('GROWTH')" class="w-full py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer">
               Start 14-Day Free Trial ($59.99/mo)
             </button>
           </div>
@@ -497,7 +501,7 @@
               </ul>
             </div>
 
-            <button onclick="selectTier('SCALE')" class="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded-lg text-xs font-extrabold transition shadow">
+            <button onclick="selectTier('SCALE')" class="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded-lg text-xs font-extrabold transition shadow cursor-pointer">
               Start 14-Day Free Trial ($199.99/mo)
             </button>
           </div>
@@ -533,7 +537,7 @@
             </div>
             <p class="text-[11px] text-zinc-500">10 products protected with 14-day free trial.</p>
           </div>
-          <button onclick="confirmTierUpgrade('STARTER')" class="w-full py-2 border border-zinc-300 hover:bg-zinc-100 text-zinc-900 rounded-lg font-bold text-xs">
+          <button onclick="confirmTierUpgrade('STARTER')" class="w-full py-2 border border-zinc-300 hover:bg-zinc-100 text-zinc-900 rounded-lg font-bold text-xs cursor-pointer">
             Start Trial ($10/mo)
           </button>
         </div>
@@ -547,7 +551,7 @@
             </div>
             <p class="text-[11px] text-zinc-500">50 products, dual-engine, & weekly drift alerts.</p>
           </div>
-          <button onclick="confirmTierUpgrade('GROWTH')" class="w-full py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg font-bold text-xs">
+          <button onclick="confirmTierUpgrade('GROWTH')" class="w-full py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg font-bold text-xs cursor-pointer">
             Start Trial ($59.99/mo)
           </button>
         </div>
@@ -561,7 +565,7 @@
             </div>
             <p class="text-[11px] text-zinc-500">Unlimited SKUs, tri-engine, & 10 rival watchlists.</p>
           </div>
-          <button onclick="confirmTierUpgrade('SCALE')" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs">
+          <button onclick="confirmTierUpgrade('SCALE')" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs cursor-pointer">
             Start Trial ($199.99/mo)
           </button>
         </div>
@@ -601,7 +605,7 @@
     if (savedState) {
       try {
         const state = JSON.parse(savedState);
-        if (state.hasAudited) {
+        if (state.hasAudited === true) {
           renderAuditedCockpit(state);
         }
       } catch (e) {
@@ -610,10 +614,10 @@
     }
 
     function startCatalogScan() {
-      const btn = document.getElementById('btn-start-scan');
+      const btnContainer = document.getElementById('scan-btn-container');
       const progressBox = document.getElementById('scan-progress-box');
       
-      btn.classList.add('hidden');
+      btnContainer.classList.add('hidden');
       progressBox.classList.remove('hidden');
 
       const steps = [
@@ -736,7 +740,14 @@
 
     function resetStoreState() {
       localStorage.removeItem(storageKey);
-      window.location.reload();
+      document.getElementById('view-cockpit').classList.add('hidden');
+      document.getElementById('view-onboarding').classList.remove('hidden');
+      document.getElementById('scan-btn-container').classList.remove('hidden');
+      document.getElementById('scan-progress-box').classList.add('hidden');
+      document.getElementById('autopilot-dot').className = 'w-2 h-2 rounded-full bg-zinc-400';
+      document.getElementById('autopilot-label').innerText = 'Auto-Pilot: Uninitialized';
+      document.getElementById('autopilot-status-pill').className = 'flex items-center space-x-2 bg-zinc-100 px-2.5 py-1 rounded-full text-xs font-mono-val text-zinc-600 border border-zinc-200';
+      showToast('🔄 State reset. Welcome to AEO Engine Onboarding!');
     }
 
     function simulateNewProductAddition() {

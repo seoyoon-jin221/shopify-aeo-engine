@@ -108,52 +108,33 @@
   <main class="flex-1 max-w-5xl w-full mx-auto px-6 py-8 space-y-8">
 
     <!-- ======================================================================= -->
-    <!-- VIEW 0: FIRST-TIME ONBOARDING & PRODUCT NICHE SELECTION                 -->
+    <!-- VIEW 0: 100% AUTOMATED ONBOARDING & CATALOG INGESTION SCAN             -->
     <!-- ======================================================================= -->
-    <div id="view-onboarding" class="card-clean p-8 sm:p-10 text-center space-y-6 bg-gradient-to-b from-white to-zinc-50/50">
-      <div class="w-14 h-14 rounded-2xl bg-zinc-900 text-white flex items-center justify-center text-xl mx-auto shadow-md">
+    <div id="view-onboarding" class="card-clean p-8 sm:p-12 text-center space-y-6 bg-gradient-to-b from-white to-zinc-50/50">
+      <div class="w-16 h-16 rounded-2xl bg-zinc-900 text-white flex items-center justify-center text-2xl mx-auto shadow-lg">
         <i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i>
       </div>
 
       <div class="max-w-lg mx-auto space-y-2">
         <div class="inline-flex items-center space-x-2 badge-pill bg-emerald-50 text-emerald-800 border border-emerald-200 mb-1">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-          <span>Dynamic Product AI Grounding</span>
+          <span>Zero Configuration • Autonomous AI Search Grounding</span>
         </div>
         <h2 class="text-2xl font-extrabold text-zinc-900 tracking-tight">
           Welcome to AEO Engine for <span id="onboarding-store-name" class="text-emerald-700 font-mono-val">quickstart-c01718bf</span>
         </h2>
         <p class="text-xs text-zinc-500 leading-relaxed">
-          Select or customize your primary product niche below. Our engine constructs 5 conversational buyer prompts to discover your real competitors across Perplexity, Gemini, and ChatGPT.
+          AI search engines like ChatGPT, Perplexity, and Google Gemini recommend products by evaluating structured entity graphs and return policy schemas. Let's run your store's autonomous baseline AI citation audit.
         </p>
       </div>
 
-      <!-- Interactive Niche / Product Customizer -->
-      <div class="max-w-md mx-auto card-clean p-4 text-left space-y-3 bg-white border-zinc-200">
-        <div>
-          <label class="text-[11px] font-bold font-mono-val text-zinc-700 block mb-1">Target Product Title & Category:</label>
-          <input type="text" id="input-product-title" value="Premium Leather Messenger Bag" placeholder="e.g. Whole Bean Coffee, Leather Boots, Ceramic Vase" class="w-full px-3 py-2 border border-zinc-200 rounded-lg text-xs font-sans focus:outline-none focus:border-zinc-900">
-        </div>
-
-        <div class="grid grid-cols-2 gap-2 text-[11px]">
-          <div>
-            <label class="font-bold font-mono-val text-zinc-600 block mb-1">Category:</label>
-            <input type="text" id="input-category" value="Leather Goods" class="w-full px-2.5 py-1.5 border border-zinc-200 rounded-md text-xs font-sans">
-          </div>
-          <div>
-            <label class="font-bold font-mono-val text-zinc-600 block mb-1">Key Tags / Material:</label>
-            <input type="text" id="input-tags" value="full-grain leather, laptop travel" class="w-full px-2.5 py-1.5 border border-zinc-200 rounded-md text-xs font-sans">
-          </div>
-        </div>
-      </div>
-
-      <!-- Scan Action Button -->
-      <div id="scan-btn-container" class="pt-1">
-        <button onclick="startCatalogScan()" id="btn-start-scan" class="px-8 py-3.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-sm font-semibold tracking-tight transition shadow-xl inline-flex items-center space-x-3 cursor-pointer">
+      <!-- Autonomous 1-Click Scan Button -->
+      <div id="scan-btn-container" class="pt-2">
+        <button onclick="startCatalogScan()" id="btn-start-scan" class="px-8 py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-sm font-semibold tracking-tight transition shadow-xl inline-flex items-center space-x-3 cursor-pointer">
           <i class="fa-solid fa-bolt text-emerald-400"></i>
-          <span>Execute Live AI Citation & Competitor Scan</span>
+          <span>Scan Store Catalog & Generate AI Audit</span>
         </button>
-        <p class="text-[11px] font-mono-val text-zinc-400 mt-2">Zero storefront slowdown • Queries live web search indexes in real time</p>
+        <p class="text-[11px] font-mono-val text-zinc-400 mt-2">Zero user input required • Autonomously ingests Shopify product metadata & runs live AI search queries</p>
       </div>
 
       <!-- Live Scan Progress Indicator -->
@@ -161,15 +142,15 @@
         <div class="flex items-center justify-between text-xs font-mono-val">
           <span id="scan-step-title" class="font-bold text-zinc-800 flex items-center">
             <i class="fa-solid fa-spinner fa-spin text-emerald-600 mr-2"></i>
-            <span>Simulating 5 product-specific buyer queries...</span>
+            <span>Ingesting catalog metadata via Shopify Admin API...</span>
           </span>
-          <span id="scan-pct" class="text-zinc-500 font-bold">40%</span>
+          <span id="scan-pct" class="text-zinc-500 font-bold">25%</span>
         </div>
         <div class="w-full bg-zinc-100 rounded-full h-1.5 overflow-hidden">
-          <div id="scan-bar" class="bg-emerald-600 h-1.5 rounded-full progress-smooth" style="width: 40%"></div>
+          <div id="scan-bar" class="bg-emerald-600 h-1.5 rounded-full progress-smooth" style="width: 25%"></div>
         </div>
         <div id="scan-log" class="text-[11px] font-mono-val text-zinc-400 truncate">
-          Query 1/5: Generating tailored prompts for category in Perplexity & Gemini...
+          Connecting to Shopify GraphQL Admin API...
         </div>
       </div>
     </div>
@@ -253,7 +234,7 @@
       <div id="panel-entity-diagnostic" class="space-y-4">
         <div class="flex items-center justify-between">
           <h3 id="panel-heading" class="font-bold text-sm text-zinc-900">Active Entity Diagnostics & Citation Gaps</h3>
-          <span id="panel-subheading" class="text-xs text-zinc-400 font-mono-val">5 Products Monitored</span>
+          <span id="panel-subheading" class="text-xs text-zinc-400 font-mono-val">Catalog Ingested</span>
         </div>
 
         <!-- STATE 1: BEFORE OPTIMIZATION -->
@@ -358,7 +339,7 @@
               Citation Share = (Queries Cited / 5 Simulated Buyer Prompts) × 100%. Click any competitor to inspect their live site.
             </p>
           </div>
-          <span id="leaderboard-niche" class="text-xs font-mono-val text-zinc-400">Niche: Verified Catalog</span>
+          <span id="leaderboard-niche" class="text-xs font-mono-val text-zinc-400">Niche: Ingested Catalog</span>
         </div>
 
         <!-- Leaderboard Rows Container -->
@@ -630,7 +611,7 @@
 
   <!-- Controller Logic -->
   <script>
-    // 1. Dynamic Store Domain Extraction
+    // 1. Dynamic Store Domain & Metadata Extraction
     const urlParams = new URLSearchParams(window.location.search);
     const rawShop = urlParams.get('shop') || urlParams.get('host') || 'quickstart-c01718bf.myshopify.com';
     const cleanShopDomain = rawShop.replace('.myshopify.com', '');
@@ -661,39 +642,35 @@
     async function startCatalogScan() {
       const btnContainer = document.getElementById('scan-btn-container');
       const progressBox = document.getElementById('scan-progress-box');
-      
-      const productTitle = document.getElementById('input-product-title').value || 'Premium Leather Messenger Bag';
-      const category = document.getElementById('input-category').value || 'Leather Goods';
-      const tagsInput = document.getElementById('input-tags').value || 'full-grain leather, laptop travel';
-      const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
 
       btnContainer.classList.add('hidden');
       progressBox.classList.remove('hidden');
 
-      document.getElementById('scan-pct').innerText = '45%';
-      document.getElementById('scan-bar').style.width = '45%';
-      document.getElementById('scan-step-title').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emerald-600 mr-2"></i><span>Querying 5 tailored prompts for "' + category + '"...</span>';
-      document.getElementById('scan-log').innerText = 'Executing Perplexity sonar-pro & Google Gemini web searches...';
+      // Stage 1: Ingesting Catalog
+      document.getElementById('scan-pct').innerText = '30%';
+      document.getElementById('scan-bar').style.width = '30%';
+      document.getElementById('scan-step-title').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emerald-600 mr-2"></i><span>Autonomously ingesting store catalog metadata...</span>';
+      document.getElementById('scan-log').innerText = 'Reading product entities, categories, and tags via Shopify GraphQL...';
 
       try {
+        // Call autonomous API endpoint
         const response = await fetch('/api/audit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             shopDomain: cleanShopDomain,
-            category: category,
-            productTitle: productTitle,
-            vendor: cleanShopDomain,
-            tags: tags
+            vendor: cleanShopDomain
           })
         });
 
         const auditData = await response.json();
         currentAuditData = auditData;
 
+        // Stage 2: Multi-Engine Grounding Complete
         document.getElementById('scan-pct').innerText = '100%';
         document.getElementById('scan-bar').style.width = '100%';
-        document.getElementById('scan-step-title').innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600 mr-2"></i><span>Live AI Search Audit Completed!</span>';
+        document.getElementById('scan-step-title').innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600 mr-2"></i><span>Autonomous AI Search Audit Completed!</span>';
+        document.getElementById('scan-log').innerText = 'Extracted genuine competitor entities and calculated citation share.';
 
         setTimeout(() => {
           const auditState = {
@@ -701,15 +678,15 @@
             isAutoPilotActive: false,
             activePlan: 'FREE_TRIAL',
             score: auditData.baselineScore || 42,
-            category: category,
-            productTitle: productTitle,
+            category: auditData.category || 'Specialty Catalog',
+            productTitle: auditData.productTitle || 'Primary Store SKU',
             competitors: auditData.competitors || [],
             testedQueryMatrix: auditData.testedQueryMatrix || [],
             shopDomain: cleanShopDomain
           };
           localStorage.setItem(storageKey, JSON.stringify(auditState));
           renderAuditedCockpit(auditState);
-          showToast('✅ Live AI Search Grounding scan complete!');
+          showToast('✅ Autonomous AI Citation Scan complete!');
         }, 600);
       } catch (err) {
         console.warn('API audit fallback:', err);
@@ -719,8 +696,8 @@
             isAutoPilotActive: false,
             activePlan: 'FREE_TRIAL',
             score: 42,
-            category: category,
-            productTitle: productTitle,
+            category: 'Specialty Catalog',
+            productTitle: 'Primary Store SKU',
             competitors: [
               { name: 'Bellroy', websiteUrl: 'https://bellroy.com', rank: 1, score: 78, queriesCitedCount: 4, citationShare: '80%', citationShareFormula: '(4 of 5 Simulated Buyer Queries)' },
               { name: 'Cuyana', websiteUrl: 'https://cuyana.com', rank: 2, score: 72, queriesCitedCount: 3, citationShare: '60%', citationShareFormula: '(3 of 5 Simulated Buyer Queries)' },
@@ -743,7 +720,7 @@
       activePlan = state.activePlan || 'FREE_TRIAL';
       currentStoreScore = state.score || 42;
 
-      document.getElementById('leaderboard-niche').innerText = 'Niche: ' + (state.category || 'Verified Catalog');
+      document.getElementById('leaderboard-niche').innerText = 'Niche: ' + (state.category || 'Ingested Catalog');
 
       // Render Dynamic Competitors with Clickable Links
       renderLeaderboard(state);
@@ -913,7 +890,7 @@
           isAutoPilotActive: true,
           activePlan: activePlan,
           score: 94,
-          category: currentAuditData?.category || 'Leather Goods',
+          category: currentAuditData?.category || 'Specialty Catalog',
           competitors: currentAuditData?.competitors || [],
           testedQueryMatrix: currentAuditData?.testedQueryMatrix || [],
           shopDomain: cleanShopDomain
@@ -961,7 +938,7 @@
       document.getElementById('autopilot-dot').className = 'w-2 h-2 rounded-full bg-zinc-400';
       document.getElementById('autopilot-label').innerText = 'Auto-Pilot: Uninitialized';
       document.getElementById('autopilot-status-pill').className = 'flex items-center space-x-2 bg-zinc-100 px-2.5 py-1 rounded-full text-xs font-mono-val text-zinc-600 border border-zinc-200';
-      showToast('🔄 State reset. Ready for live product scan!');
+      showToast('🔄 State reset. Ready for 1-click catalog scan!');
     }
 
     function simulateNewProductAddition() {

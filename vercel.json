@@ -1,14 +1,11 @@
 {
-  "version": 2,
-  "public": true,
-  "cleanUrls": true,
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors https://*.myshopify.com https://admin.shopify.com https://shopify.com https://*.spin.dev;"
+          "value": "frame-ancestors https://admin.shopify.com https://*.myshopify.com https://*.shopify.com https://*.spin.dev;"
         },
         {
           "key": "Cache-Control",
@@ -17,33 +14,7 @@
       ]
     }
   ],
-  "crons": [
-    {
-      "path": "/api/cron/sentinel",
-      "schedule": "0 0 * * 0"
-    }
-  ],
   "rewrites": [
-    {
-      "source": "/api/audit",
-      "destination": "/api/audit.js"
-    },
-    {
-      "source": "/api/scrape-schema",
-      "destination": "/api/scrape-schema.js"
-    },
-    {
-      "source": "/api/inject-metafields",
-      "destination": "/api/inject-metafields.js"
-    },
-    {
-      "source": "/api/billing",
-      "destination": "/api/billing.js"
-    },
-    {
-      "source": "/api/cron/sentinel",
-      "destination": "/api/cron/sentinel.js"
-    },
     {
       "source": "/((?!api/).*)",
       "destination": "/public/index.html"

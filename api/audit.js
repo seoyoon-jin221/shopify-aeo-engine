@@ -193,7 +193,7 @@ module.exports = async (req, res) => {
         }
       }
 
-      const extracted = extractBrands(responseText, category);
+      const extracted = extractBrands(responseText);
       return {
         id: q.id,
         responseText,
@@ -238,23 +238,27 @@ module.exports = async (req, res) => {
             const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
             if (!isNoise(hostname, NOISE_DOMAINS) && !hostname.includes(cleanStoreDomain)) {
               const brandName = inferBrand(hostname);
-              if (!domainMap.has(hostname)) {
-                domainMap.set(hostname, { brandName, count: 0, url: parsed.href });
+              if (isValidBrandName(brandName)) {
+                if (!domainMap.has(hostname)) {
+                  domainMap.set(hostname, { brandName, count: 0, url: parsed.href });
+                }
+                domainMap.get(hostname).count += 3;
               }
-              domainMap.get(hostname).count += 3;
             }
           } catch {}
         });
 
         // Process Extracted Brands
         item.extractedBrands.forEach((b) => {
-          const slug = b.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-          const hostname = b.domain || `${slug}.com`;
-          if (!isNoise(hostname, NOISE_DOMAINS) && !slug.includes(cleanStoreDomain)) {
-            if (!domainMap.has(hostname)) {
-              domainMap.set(hostname, { brandName: b.name, count: 0, url: `https://${hostname}` });
+          if (isValidBrandName(b.name)) {
+            const slug = b.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const hostname = b.domain || `${slug}.com`;
+            if (!isNoise(hostname, NOISE_DOMAINS) && !slug.includes(cleanStoreDomain)) {
+              if (!domainMap.has(hostname)) {
+                domainMap.set(hostname, { brandName: b.name, count: 0, url: `https://${hostname}` });
+              }
+              domainMap.get(hostname).count += 4;
             }
-            domainMap.get(hostname).count += 4;
           }
         });
       }
@@ -380,29 +384,43 @@ function inferBrand(domain) {
   return p.charAt(0).toUpperCase() + p.slice(1);
 }
 
-function extractBrands(text, category) {
-  const brands = [];
-  const GENERIC_WORDS = new Set([
-    'with', 'and', 'the', 'for', 'best', 'top', 'under', 'maker', 'machine', 'brewer',
-    'grinder', 'coffee', 'fast shipping', 'warranty', 'return', 'policy', 'review',
-    'reviews', 'guide', 'picks', 'overall', 'budget', 'value', 'drip', 'espresso',
-    'specialty', 'leather', 'skincare', 'bag', 'wallet', 'goods', 'online', 'store'
-  ]);
+function isValidBrandName(str) {
+  if (!str || typeof str !== 'string') return false;
+  const s = str.trim().toLowerCase();
+  if (s.length < 3 || s.length > 25) return false;
+  if (/\d/.test(s)) return false; // Brand names shouldn't be "30 days", "7 days", "10-day"
 
-  // Extract known brands mentioned in text
+  const BANNED_WORDS = [
+    'day', 'days', 'fee', 'fees', 'shipping', 'delivery', 'receiving', 'restocking',
+    'return', 'returns', 'merchandise', 'refund', 'warranty', 'policy', 'customer',
+    'service', 'store', 'shop', 'item', 'items', 'order', 'orders', 'free', 'under',
+    'best', 'top', 'good', 'worth', 'cheap', 'fast', 'with', 'and', 'for', 'the',
+    'maker', 'machine', 'brewer', 'grinder', 'coffee', 'leather', 'skincare'
+  ];
+
+  for (const bw of BANNED_WORDS) {
+    if (s === bw || s.includes(` ${bw}`) || s.includes(`${bw} `)) return false;
+  }
+  return true;
+}
+
+function extractBrands(text) {
+  const brands = [];
+
   const KNOWN_BRAND_MAP = {
     'breville': { name: 'Breville', domain: 'breville.com' },
     'baratza': { name: 'Baratza', domain: 'baratza.com' },
-    'fellow': { name: 'Fellow', domain: 'fellowproducts.com' },
+    'fellow': { name: 'Fellow Products', domain: 'fellowproducts.com' },
     'chemex': { name: 'Chemex', domain: 'chemexcoffeemaker.com' },
     'aeropress': { name: 'AeroPress', domain: 'aeropress.com' },
     'hario': { name: 'Hario', domain: 'hario-usa.com' },
     'kalita': { name: 'Kalita', domain: 'kalitausa.com' },
-    'de\'longhi': { name: 'De\'Longhi', domain: 'delonghi.com' },
     'delonghi': { name: 'De\'Longhi', domain: 'delonghi.com' },
     'gevi': { name: 'Gevi', domain: 'gevi.com' },
-    'oxox': { name: 'OXO', domain: 'oxo.com' },
     'oxo': { name: 'OXO', domain: 'oxo.com' },
+    'blue bottle': { name: 'Blue Bottle Coffee', domain: 'bluebottlecoffee.com' },
+    'stumptown': { name: 'Stumptown Coffee', domain: 'stumptowncoffee.com' },
+    'onyx': { name: 'Onyx Coffee Lab', domain: 'onyxcoffeelab.com' },
     'bellroy': { name: 'Bellroy', domain: 'bellroy.com' },
     'cuyana': { name: 'Cuyana', domain: 'cuyana.com' },
     'saddleback': { name: 'Saddleback Leather', domain: 'saddlebackleather.com' },
@@ -417,13 +435,11 @@ function extractBrands(text, category) {
     }
   });
 
-  // Extract bold capitalized brand tokens
   const boldMatches = text.match(/\*\*([A-Z][A-Za-z0-9\s&'-]{2,20})\*\*/g) || [];
   boldMatches.forEach((m) => {
     const clean = m.replace(/\*\*/g, '').trim();
-    const cleanLower = clean.toLowerCase();
-    if (!GENERIC_WORDS.has(cleanLower) && clean.length > 2 && !clean.includes('http')) {
-      const slug = cleanLower.replace(/[^a-z0-9]/g, '');
+    if (isValidBrandName(clean) && !clean.includes('http')) {
+      const slug = clean.toLowerCase().replace(/[^a-z0-9]/g, '');
       brands.push({ name: clean, domain: `${slug}.com` });
     }
   });

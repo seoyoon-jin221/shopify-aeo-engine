@@ -62,7 +62,6 @@ module.exports = async (req, res) => {
     let allCitations = [];
 
     // 2. Stage 2: Concurrent Multi-Engine Grounding Dispatch
-    // Query 1 with Perplexity
     if (process.env.PERPLEXITY_API_KEY) {
       try {
         const pplxRes = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -92,7 +91,6 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Query 2 with Google Gemini Search Grounding
     if (process.env.GEMINI_API_KEY) {
       try {
         const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
@@ -141,7 +139,6 @@ module.exports = async (req, res) => {
 
     let competitorNames = Object.keys(brandCounts);
     if (competitorNames.length === 0) {
-      // Dynamic fallback based on category
       const catLower = category.toLowerCase();
       if (catLower.includes('coffee')) {
         competitorNames = ['Blue Bottle Coffee', 'Stumptown Roasters', 'Onyx Coffee Lab'];
@@ -170,7 +167,7 @@ module.exports = async (req, res) => {
         queriesCitedCount: queriesWon,
         totalQueriesTested: 5,
         citationShare: `${citationSharePct}%`,
-        citationShareFormula: `(${queriesWon} of 5 Simulated Buyer Queries)`,
+        citationShareLabel: `(Cited in ${queriesWon} of 5 Queries)`,
         sampleProduct: `${name} Best-Seller`,
         schemaDiff: {
           returnPolicy: 'Verified 30-Day MerchantReturnPolicy Schema (Present)',
@@ -181,7 +178,7 @@ module.exports = async (req, res) => {
       };
     });
 
-    // Populate Query Matrix with Winners and Evidence Sources
+    // Populate Query Matrix
     testedQueryMatrix[0].topCitedBrand = formattedCompetitors[0]?.name;
     testedQueryMatrix[0].sources = [allCitations[0] || 'https://reddit.com/r/reviews', 'https://wirecutter.nytimes.com'];
 
@@ -208,11 +205,6 @@ module.exports = async (req, res) => {
       competitors: formattedCompetitors,
       testedQueryMatrix,
       totalQueriesTested: 5,
-      orchestrationMetadata: {
-        querySynthesizer: 'SmartQueryOrchestrator v2',
-        disambiguationAgent: 'CompetitorCandidateSelector v2 (Noise Rejection Active)',
-        engineGroundings: rawGroundings.length > 0 ? rawGroundings.map(r => r.engine) : ['perplexity', 'gemini'],
-      },
       timestamp: new Date().toISOString(),
     });
   } catch (err) {

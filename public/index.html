@@ -108,7 +108,7 @@
   <main class="flex-1 max-w-5xl w-full mx-auto px-6 py-8 space-y-8">
 
     <!-- ======================================================================= -->
-    <!-- VIEW 0: 100% AUTOMATED ONBOARDING & CATALOG INGESTION SCAN             -->
+    <!-- VIEW 0: 100% AUTONOMOUS ONBOARDING & CATALOG INGESTION SCAN             -->
     <!-- ======================================================================= -->
     <div id="view-onboarding" class="card-clean p-8 sm:p-12 text-center space-y-6 bg-gradient-to-b from-white to-zinc-50/50">
       <div class="w-16 h-16 rounded-2xl bg-zinc-900 text-white flex items-center justify-center text-2xl mx-auto shadow-lg">
@@ -281,11 +281,8 @@
           <div class="flex items-center justify-between border-b border-zinc-200 pb-3">
             <div class="flex items-center space-x-2">
               <span class="badge-pill bg-emerald-50 text-emerald-800 border border-emerald-200">AUTO-PILOT ACTIVE</span>
-              <span class="text-xs font-bold text-zinc-900">Protected Entity Graph & Storefront Injections</span>
-            </div>
-            <span class="text-xs font-mono-val text-emerald-700 font-semibold">● Last Synced: Just now</span>
+              <span class="text-xs font-mono-val text-emerald-700 font-semibold">● Last Synced: Just now</span>
           </div>
-
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             <div class="p-3.5 bg-emerald-50/40 rounded-lg border border-emerald-200 space-y-1">
               <span class="text-emerald-700 font-bold block text-[11px] font-mono-val">✓ VERIFIED RETURN POLICY</span>
@@ -324,7 +321,7 @@
       </div>
 
       <!-- ======================================================================= -->
-      <!-- VERIFIABLE CITATION LEADERBOARD WITH CLICKABLE URLS                     -->
+      <!-- CLEAN CITATION LEADERBOARD WITH CLICKABLE URLS                          -->
       <!-- ======================================================================= -->
       <div id="section-competitor-matrix" class="card-clean p-6 space-y-5">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 pb-4">
@@ -336,7 +333,7 @@
               </span>
             </div>
             <p id="leaderboard-prompt-subtitle" class="text-xs text-zinc-500 mt-0.5">
-              Citation Share = (Queries Cited / 5 Simulated Buyer Prompts) × 100%. Click any competitor to inspect their live site.
+              Simulated across 5 conversational buyer prompts in Perplexity, Gemini, and ChatGPT. Click any competitor to inspect their live site.
             </p>
           </div>
           <span id="leaderboard-niche" class="text-xs font-mono-val text-zinc-400">Niche: Ingested Catalog</span>
@@ -352,18 +349,13 @@
           <button onclick="toggleQueryProofAccordion()" class="w-full flex items-center justify-between py-2 px-3 bg-zinc-50 hover:bg-zinc-100 rounded-lg text-xs font-mono-val text-zinc-700 transition border border-zinc-200 cursor-pointer">
             <span class="font-bold flex items-center">
               <i class="fa-solid fa-list-check text-emerald-600 mr-2"></i>
-              <span>View 5 Tested Buyer Prompts & Verifiable Citation Sources</span>
+              <span>View 5 Tested Buyer Prompts & Citation Sources</span>
             </span>
             <span id="proof-accordion-chevron" class="text-zinc-400 text-[10px]">▼ Expand Proof</span>
           </button>
 
           <!-- Accordion Content Container -->
           <div id="proof-accordion-content" class="hidden mt-3 space-y-3">
-            <div class="p-3 bg-zinc-50 rounded-lg border border-zinc-200 text-[11px] font-mono-val text-zinc-500 flex items-center justify-between">
-              <span><strong>Mathematical Formula:</strong> Citation Share % = (Queries Cited / 5 Tested Queries) × 100%</span>
-              <span class="badge-pill bg-zinc-200 text-zinc-800">5 Distinct Intent Archetypes</span>
-            </div>
-
             <div id="query-proof-list" class="space-y-2 text-xs">
               <!-- Dynamically Populated Query Evidence Rows -->
             </div>
@@ -653,7 +645,6 @@
       document.getElementById('scan-log').innerText = 'Reading product entities, categories, and tags via Shopify GraphQL...';
 
       try {
-        // Call autonomous API endpoint
         const response = await fetch('/api/audit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -666,7 +657,6 @@
         const auditData = await response.json();
         currentAuditData = auditData;
 
-        // Stage 2: Multi-Engine Grounding Complete
         document.getElementById('scan-pct').innerText = '100%';
         document.getElementById('scan-bar').style.width = '100%';
         document.getElementById('scan-step-title').innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600 mr-2"></i><span>Autonomous AI Search Audit Completed!</span>';
@@ -699,9 +689,9 @@
             category: 'Specialty Catalog',
             productTitle: 'Primary Store SKU',
             competitors: [
-              { name: 'Bellroy', websiteUrl: 'https://bellroy.com', rank: 1, score: 78, queriesCitedCount: 4, citationShare: '80%', citationShareFormula: '(4 of 5 Simulated Buyer Queries)' },
-              { name: 'Cuyana', websiteUrl: 'https://cuyana.com', rank: 2, score: 72, queriesCitedCount: 3, citationShare: '60%', citationShareFormula: '(3 of 5 Simulated Buyer Queries)' },
-              { name: 'Saddleback Leather', websiteUrl: 'https://saddlebackleather.com', rank: 3, score: 66, queriesCitedCount: 2, citationShare: '40%', citationShareFormula: '(2 of 5 Simulated Buyer Queries)' }
+              { name: 'Bellroy', websiteUrl: 'https://bellroy.com', rank: 1, score: 78, queriesCitedCount: 4, citationShare: '80%', citationShareLabel: '(Cited in 4 of 5 Queries)' },
+              { name: 'Cuyana', websiteUrl: 'https://cuyana.com', rank: 2, score: 72, queriesCitedCount: 3, citationShare: '60%', citationShareLabel: '(Cited in 3 of 5 Queries)' },
+              { name: 'Saddleback Leather', websiteUrl: 'https://saddlebackleather.com', rank: 3, score: 66, queriesCitedCount: 2, citationShare: '40%', citationShareLabel: '(Cited in 2 of 5 Queries)' }
             ],
             testedQueryMatrix: [],
             shopDomain: cleanShopDomain
@@ -750,7 +740,7 @@
                   <span>Your Store: ${cleanShopDomain}</span>
                   <span class="badge-pill bg-emerald-100 text-emerald-800 text-[10px]">YOU</span>
                 </span>
-                <span class="text-[11px] text-emerald-800 font-mono-val">RAG Schema Injected • 5 of 5 Queries Won • Live on Theme</span>
+                <span class="text-[11px] text-emerald-800 font-mono-val">RAG Schema Injected • Cited in 5 of 5 Queries • Live on Theme</span>
               </div>
             </div>
             <div class="text-right font-mono-val">
@@ -764,7 +754,7 @@
       competitors.forEach((comp, idx) => {
         const displayRank = isAutoPilotActive ? idx + 2 : idx + 1;
         const webUrl = comp.websiteUrl || `https://${comp.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
-        const shareFormula = comp.citationShareFormula || `(${comp.queriesCitedCount || 3} of 5 Simulated Buyer Queries)`;
+        const shareLabel = comp.citationShareLabel || `(Cited in ${comp.queriesCitedCount || 3} of 5 Queries)`;
 
         rowsHtml += `
           <div class="py-4 flex items-center justify-between hover:bg-zinc-50/80 -mx-6 px-6 rounded-lg transition">
@@ -786,7 +776,7 @@
             </div>
             <div class="text-right font-mono-val">
               <span class="text-sm font-bold text-zinc-700">${comp.score || 74} / 100</span>
-              <span class="block text-[10px] text-zinc-500">Citation Share: <strong>${comp.citationShare || '70%'}</strong> <span class="text-zinc-400">${shareFormula}</span></span>
+              <span class="block text-[10px] text-zinc-500">Citation Share: <strong>${comp.citationShare || '70%'}</strong> <span class="text-zinc-400">${shareLabel}</span></span>
             </div>
           </div>
         `;
@@ -808,7 +798,7 @@
             </div>
             <div class="text-right font-mono-val">
               <span class="text-sm font-bold text-zinc-700">42 / 100</span>
-              <span class="block text-[10px] text-zinc-500">Citation Share: <strong>20%</strong> <span class="text-zinc-400">(1 of 5 Queries)</span></span>
+              <span class="block text-[10px] text-zinc-500">Citation Share: <strong>20%</strong> <span class="text-zinc-400">(Cited in 1 of 5 Queries)</span></span>
             </div>
           </div>
         `;

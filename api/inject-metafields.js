@@ -64,12 +64,34 @@ module.exports = async (req, res) => {
     };
 
     // 2. Real Shopify GraphQL MetafieldsSet Mutation
-    // If Shopify Admin Access Token is available in environment or request header
     const accessToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN || req.headers['x-shopify-access-token'];
     let graphQlResult = null;
+    let targetProductId = body.productId;
 
     if (accessToken) {
       const endpoint = `https://${shopDomain}/admin/api/2026-01/graphql.json`;
+
+      // Fetch first real product ID if not provided
+      if (!targetProductId) {
+        try {
+          const fetchProductsQuery = `{ products(first: 1) { edges { node { id, title } } } }`;
+          const pRes = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Shopify-Access-Token': accessToken,
+            },
+            body: JSON.stringify({ query: fetchProductsQuery }),
+          });
+          if (pRes.ok) {
+            const pData = await pRes.json();
+            targetProductId = pData.data?.products?.edges?.[0]?.node?.id;
+          }
+        } catch (e) {
+          console.warn('[inject-metafields] Could not fetch real product ID:', e.message);
+        }
+      }
+
       const mutation = `
         mutation MetafieldsSet($metafields: [MetafieldsSetInput!]!) {
           metafieldsSet(metafields: $metafields) {
@@ -90,14 +112,14 @@ module.exports = async (req, res) => {
       const variables = {
         metafields: [
           {
-            ownerId: body.productId || 'gid://shopify/Product/1',
+            ownerId: targetProductId || 'gid://shopify/Product/1',
             namespace: 'geo_engine',
             key: 'structured_data',
             type: 'json',
             value: JSON.stringify(structuredData),
           },
           {
-            ownerId: body.productId || 'gid://shopify/Product/1',
+            ownerId: targetProductId || 'gid://shopify/Product/1',
             namespace: 'geo_engine',
             key: 'faq_data',
             type: 'json',
@@ -128,6 +150,7 @@ module.exports = async (req, res) => {
       success: true,
       shopDomain,
       productTitle,
+      targetProductId: targetProductId || 'gid://shopify/Product/1',
       injectedMetafields: [
         { namespace: 'geo_engine', key: 'structured_data', type: 'json' },
         { namespace: 'geo_engine', key: 'faq_data', type: 'json' },

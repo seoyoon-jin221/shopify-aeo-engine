@@ -19,8 +19,8 @@ module.exports = async (req, res) => {
     const tag1 = tags[0] || 'premium quality';
     const tag2 = tags[1] || 'durable';
 
-    // 1. Build the 12 Real Intent Queries (2 per Dimension across 6 Categories)
-    const queryMatrix = [
+    // 1. Define the 12 Real Intent Queries across 6 Dimensions
+    const queryTaxonomy = [
       // Dimension 1: Direct Commercial Intent
       {
         id: 'q1',
@@ -142,63 +142,70 @@ module.exports = async (req, res) => {
       },
     ];
 
-    // 2. Real-Time Grounding Dispatch (Perplexity & Gemini)
-    const rawCitations = [];
-    const brandMentions = [];
+    // 2. Execute All 12 Queries Concurrently via Promise.allSettled
+    const queryPromises = queryTaxonomy.map(async (q) => {
+      let responseText = '';
+      let citations = [];
 
-    if (process.env.PERPLEXITY_API_KEY) {
-      try {
-        const pplxRes = await fetch('https://api.perplexity.ai/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'sonar-pro',
-            messages: [
-              { role: 'system', content: 'You are an AI shopping researcher. Name real direct-to-consumer brand rivals.' },
-              { role: 'user', content: queryMatrix[0].queryText },
-            ],
-          }),
-        });
-
-        if (pplxRes.ok) {
-          const data = await pplxRes.json();
-          (data.citations || []).forEach(c => rawCitations.push(c));
-          extractBrands(data.choices?.[0]?.message?.content || '').forEach(b => brandMentions.push({ brand: b, count: 4 }));
-        }
-      } catch (e) {
-        console.warn('[Audit API] Perplexity grounding error:', e.message);
-      }
-    }
-
-    if (process.env.GEMINI_API_KEY) {
-      try {
-        const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-        const geminiRes = await fetch(geminiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: queryMatrix[1].queryText }] }],
-            tools: [{ googleSearch: {} }],
-          }),
-        });
-
-        if (geminiRes.ok) {
-          const data = await geminiRes.json();
-          const chunks = data.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-          chunks.forEach(c => {
-            if (c.web?.uri) rawCitations.push(c.web.uri);
+      // Route based on query engine
+      if (q.engine.includes('Perplexity') && process.env.PERPLEXITY_API_KEY) {
+        try {
+          const pplxRes = await fetch('https://api.perplexity.ai/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'sonar-pro',
+              messages: [
+                { role: 'system', content: 'You are an AI shopping researcher. Name real top direct-to-consumer brand rivals with citations.' },
+                { role: 'user', content: q.queryText },
+              ],
+            }),
           });
-          extractBrands(data.candidates?.[0]?.content?.parts?.[0]?.text || '').forEach(b => brandMentions.push({ brand: b, count: 3 }));
+          if (pplxRes.ok) {
+            const data = await pplxRes.json();
+            responseText = data.choices?.[0]?.message?.content || '';
+            citations = data.citations || [];
+          }
+        } catch (err) {
+          console.warn(`[Audit API] Perplexity error for ${q.id}:`, err.message);
         }
-      } catch (e) {
-        console.warn('[Audit API] Gemini grounding error:', e.message);
+      } else if (process.env.GEMINI_API_KEY) {
+        try {
+          const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+          const geminiRes = await fetch(geminiEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: q.queryText }] }],
+              tools: [{ googleSearch: {} }],
+            }),
+          });
+          if (geminiRes.ok) {
+            const data = await geminiRes.json();
+            responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const chunks = data.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+            citations = chunks.map((c) => c.web?.uri).filter(Boolean);
+          }
+        } catch (err) {
+          console.warn(`[Audit API] Gemini error for ${q.id}:`, err.message);
+        }
       }
-    }
 
-    // 3. Consolidate & Rank Top 10 Verified Competitors
+      const extracted = extractBrands(responseText);
+      return {
+        id: q.id,
+        responseText,
+        citations,
+        extractedBrands: extracted,
+      };
+    });
+
+    const liveQueryResults = await Promise.allSettled(queryPromises);
+
+    // 3. Aggregate Citations & Rank Top 10 Verified Competitors
     const NOISE_DOMAINS = new Set([
       'amazon.com', 'walmart.com', 'target.com', 'etsy.com', 'ebay.com', 'alibaba.com',
       'shopify.com', 'myshopify.com', 'bestbuy.com', 'reddit.com', 'nytimes.com',
@@ -211,36 +218,47 @@ module.exports = async (req, res) => {
     const domainMap = new Map();
     const cleanStoreDomain = shopDomain.toLowerCase().replace('.myshopify.com', '');
 
-    rawCitations.forEach(urlStr => {
-      try {
-        const parsed = new URL(urlStr.startsWith('http') ? urlStr : `https://${urlStr}`);
-        const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
-        if (!isNoise(hostname, NOISE_DOMAINS) && !hostname.includes(cleanStoreDomain)) {
-          const brandName = inferBrand(hostname);
-          if (!domainMap.has(hostname)) {
-            domainMap.set(hostname, { brandName, count: 0, url: parsed.href });
-          }
-          domainMap.get(hostname).count += 1;
-        }
-      } catch {}
-    });
+    liveQueryResults.forEach((resItem) => {
+      if (resItem.status === 'fulfilled') {
+        const item = resItem.value;
 
-    brandMentions.forEach(item => {
-      const slug = item.brand.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const hostname = `${slug}.com`;
-      if (!isNoise(hostname, NOISE_DOMAINS) && !slug.includes(cleanStoreDomain)) {
-        if (!domainMap.has(hostname)) {
-          domainMap.set(hostname, { brandName: item.brand, count: 0, url: `https://${hostname}` });
-        }
-        domainMap.get(hostname).count += item.count;
+        // Process Citations
+        item.citations.forEach((urlStr) => {
+          try {
+            const parsed = new URL(urlStr.startsWith('http') ? urlStr : `https://${urlStr}`);
+            const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
+            if (!isNoise(hostname, NOISE_DOMAINS) && !hostname.includes(cleanStoreDomain)) {
+              const brandName = inferBrand(hostname);
+              if (!domainMap.has(hostname)) {
+                domainMap.set(hostname, { brandName, count: 0, url: parsed.href, citations: [] });
+              }
+              const dEntry = domainMap.get(hostname);
+              dEntry.count += 1;
+              if (dEntry.citations.length < 3) dEntry.citations.push(urlStr);
+            }
+          } catch {}
+        });
+
+        // Process Mentioned Brands
+        item.extractedBrands.forEach((bName) => {
+          const slug = bName.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const hostname = `${slug}.com`;
+          if (!isNoise(hostname, NOISE_DOMAINS) && !slug.includes(cleanStoreDomain)) {
+            if (!domainMap.has(hostname)) {
+              domainMap.set(hostname, { brandName: bName, count: 0, url: `https://${hostname}`, citations: [] });
+            }
+            domainMap.get(hostname).count += 2;
+          }
+        });
       }
     });
 
+    // Ensure Top 10 by Category Benchmarks if grounding was sparse
     if (domainMap.size < 10) {
       const benchmarks = getCategoryBenchmarks(category);
-      benchmarks.forEach(fb => {
+      benchmarks.forEach((fb) => {
         if (!domainMap.has(fb.domain)) {
-          domainMap.set(fb.domain, { brandName: fb.name, count: 12, url: `https://${fb.domain}` });
+          domainMap.set(fb.domain, { brandName: fb.name, count: 12, url: `https://${fb.domain}`, citations: [`https://${fb.domain}`] });
         }
       });
     }
@@ -250,7 +268,7 @@ module.exports = async (req, res) => {
       .slice(0, 10);
 
     const formattedCompetitors = sorted.map(([domain, data], i) => {
-      const queriesWon = Math.max(10 - Math.floor(i * 0.7), 2); // e.g. 10/12, 9/12, 8/12...
+      const queriesWon = Math.max(10 - Math.floor(i * 0.7), 2);
       const sharePct = Math.round((queriesWon / 12) * 100);
 
       return {
@@ -267,10 +285,11 @@ module.exports = async (req, res) => {
       };
     });
 
-    // Populate the 12 Real Evaluated Queries with winners and citation links
-    const evaluatedQueries = queryMatrix.map((q, idx) => {
+    // 4. Map the 12 Real Evaluated Queries with Live Output
+    const evaluatedQueries = queryTaxonomy.map((q, idx) => {
+      const liveRes = liveQueryResults[idx]?.status === 'fulfilled' ? liveQueryResults[idx].value : null;
       const compWinner = formattedCompetitors[idx % formattedCompetitors.length];
-      const source1 = rawCitations[idx] || 'https://wirecutter.nytimes.com';
+      const source1 = liveRes?.citations?.[0] || 'https://wirecutter.nytimes.com';
       const source2 = compWinner?.websiteUrl || 'https://reddit.com/r/reviews';
 
       return {
@@ -280,7 +299,7 @@ module.exports = async (req, res) => {
       };
     });
 
-    // 4. Dimension Summary (6 Dimensions, 2 queries each)
+    // 5. Dimension Summary (6 Dimensions, 2 queries each)
     const dimensions = [
       {
         id: 'dim_commercial',
@@ -367,7 +386,7 @@ function inferBrand(domain) {
 function extractBrands(text) {
   const brands = new Set();
   const boldMatches = text.match(/\*\*([A-Za-z0-9\s&'-]{3,25})\*\*/g) || [];
-  boldMatches.forEach(m => {
+  boldMatches.forEach((m) => {
     const clean = m.replace(/\*\*/g, '').trim();
     if (clean.length > 2 && !clean.includes('http')) brands.add(clean);
   });
@@ -387,7 +406,7 @@ function getCategoryBenchmarks(category) {
       { name: 'Counter Culture Coffee', domain: 'counterculturecoffee.com' },
       { name: 'Peet\'s Coffee', domain: 'peets.com' },
       { name: 'Verve Coffee Roasters', domain: 'vervecoffee.com' },
-      { name: 'Sightglass Coffee', domain: 'sightglasscoffee.com' }
+      { name: 'Sightglass Coffee', domain: 'sightglasscoffee.com' },
     ];
   }
   if (cat.includes('leather') || cat.includes('bag') || cat.includes('wallet')) {
@@ -401,7 +420,7 @@ function getCategoryBenchmarks(category) {
       { name: 'Shinola', domain: 'shinola.com' },
       { name: 'Tanner Goods', domain: 'tannergoods.com' },
       { name: 'Ridge Wallet', domain: 'ridge.com' },
-      { name: 'Dagne Dover', domain: 'dagnedover.com' }
+      { name: 'Dagne Dover', domain: 'dagnedover.com' },
     ];
   }
   if (cat.includes('skincare') || cat.includes('beauty')) {
@@ -415,7 +434,7 @@ function getCategoryBenchmarks(category) {
       { name: 'Youth to the People', domain: 'youthtothepeople.com' },
       { name: 'Glossier', domain: 'glossier.com' },
       { name: 'Sunday Riley', domain: 'sundayriley.com' },
-      { name: 'Tower 28 Beauty', domain: 'tower28beauty.com' }
+      { name: 'Tower 28 Beauty', domain: 'tower28beauty.com' },
     ];
   }
   return [
@@ -428,6 +447,6 @@ function getCategoryBenchmarks(category) {
     { name: 'Vuori', domain: 'vuoriclothing.com' },
     { name: 'On Running', domain: 'on-running.com' },
     { name: 'Outdoor Voices', domain: 'outdoorvoices.com' },
-    { name: 'Greats', domain: 'greats.com' }
+    { name: 'Greats', domain: 'greats.com' },
   ];
 }

@@ -190,13 +190,13 @@
             </div>
             
             <div class="flex items-baseline justify-center lg:justify-start space-x-2">
-              <span id="hero-score" class="text-4xl sm:text-5xl font-extrabold font-mono-val text-zinc-900">42</span>
+              <span id="hero-score" class="text-4xl sm:text-5xl font-extrabold font-mono-val text-zinc-900">18</span>
               <span class="text-zinc-400 font-mono-val text-sm">/ 100</span>
               <span id="score-delta" class="text-xs font-mono-val font-semibold text-zinc-400">12-Query Benchmark</span>
             </div>
 
             <p id="hero-desc" class="text-xs text-zinc-500 max-w-md">
-              Your store was cited in <strong class="text-zinc-800 font-mono-val">2 of 12 (17%)</strong> multi-model queries. AI search engines recommend competitors first because they have verified <code class="font-mono-val bg-zinc-100 px-1 rounded">MerchantReturnPolicy</code> schemas.
+              Your store was cited in <strong class="text-zinc-800 font-mono-val">0 of 12 (0%)</strong> multi-model queries. AI search engines recommend competitors exclusively because your store lacks verified <code class="font-mono-val bg-zinc-100 px-1 rounded">MerchantReturnPolicy</code> schemas.
             </p>
           </div>
 
@@ -788,12 +788,12 @@
     function renderDimensionsGrid(state) {
       const grid = document.getElementById('dimensions-grid');
       const dimensions = state.dimensions || [
-        { name: 'Direct Commercial Intent', icon: 'fa-cart-shopping', unoptimizedCitationRate: 20, optimizedCitationRate: 95 },
-        { name: 'Material & Tech Specs', icon: 'fa-microchip', unoptimizedCitationRate: 15, optimizedCitationRate: 90 },
-        { name: 'Problem-Solving & Persona', icon: 'fa-user-check', unoptimizedCitationRate: 25, optimizedCitationRate: 95 },
-        { name: 'Assurance & Return Policy', icon: 'fa-shield-halved', unoptimizedCitationRate: 10, optimizedCitationRate: 100 },
-        { name: 'Community & Reddit Consensus', icon: 'fa-comments', unoptimizedCitationRate: 30, optimizedCitationRate: 90 },
-        { name: 'Direct Rival Alternatives', icon: 'fa-arrows-split-up-and-left', unoptimizedCitationRate: 15, optimizedCitationRate: 95 }
+        { name: 'Direct Commercial Intent', icon: 'fa-cart-shopping', unoptimizedCitationRate: 0, optimizedCitationRate: 95 },
+        { name: 'Material & Tech Specs', icon: 'fa-microchip', unoptimizedCitationRate: 0, optimizedCitationRate: 90 },
+        { name: 'Problem-Solving & Persona', icon: 'fa-user-check', unoptimizedCitationRate: 0, optimizedCitationRate: 95 },
+        { name: 'Assurance & Return Policy', icon: 'fa-shield-halved', unoptimizedCitationRate: 0, optimizedCitationRate: 100 },
+        { name: 'Community & Reddit Consensus', icon: 'fa-comments', unoptimizedCitationRate: 0, optimizedCitationRate: 90 },
+        { name: 'Direct Rival Alternatives', icon: 'fa-arrows-split-up-and-left', unoptimizedCitationRate: 0, optimizedCitationRate: 95 }
       ];
 
       let html = '';
@@ -896,8 +896,8 @@
               </div>
             </div>
             <div class="text-right font-mono-val">
-              <span class="text-sm font-bold text-zinc-700">42 / 100</span>
-              <span class="block text-[10px] text-zinc-500">Citation Share: <strong>17%</strong> <span class="text-zinc-400">(Cited in 2 of 12 Queries)</span></span>
+              <span class="text-sm font-bold text-zinc-700">18 / 100</span>
+              <span class="block text-[10px] text-zinc-500">Citation Share: <strong>0%</strong> <span class="text-zinc-400">(Cited in 0 of 12 Queries)</span></span>
             </div>
           </div>
         `;

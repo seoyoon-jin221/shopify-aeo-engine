@@ -301,13 +301,14 @@ module.exports = async (req, res) => {
     });
 
     // 5. Dimension Summary (6 Dimensions, 2 queries each)
+    // For an unoptimized store, baseline citations across all 6 dimensions is 0%
     const dimensions = [
       {
         id: 'dim_commercial',
         name: 'Direct Commercial Intent',
         icon: 'fa-cart-shopping',
         queriesCount: 2,
-        unoptimizedCitationRate: 20,
+        unoptimizedCitationRate: 0,
         optimizedCitationRate: 95,
       },
       {
@@ -315,7 +316,7 @@ module.exports = async (req, res) => {
         name: 'Material & Tech Specs',
         icon: 'fa-microchip',
         queriesCount: 2,
-        unoptimizedCitationRate: 15,
+        unoptimizedCitationRate: 0,
         optimizedCitationRate: 90,
       },
       {
@@ -323,7 +324,7 @@ module.exports = async (req, res) => {
         name: 'Problem-Solving & Persona',
         icon: 'fa-user-check',
         queriesCount: 2,
-        unoptimizedCitationRate: 25,
+        unoptimizedCitationRate: 0,
         optimizedCitationRate: 95,
       },
       {
@@ -331,7 +332,7 @@ module.exports = async (req, res) => {
         name: 'Assurance & Return Policy',
         icon: 'fa-shield-halved',
         queriesCount: 2,
-        unoptimizedCitationRate: 10,
+        unoptimizedCitationRate: 0,
         optimizedCitationRate: 100,
       },
       {
@@ -339,7 +340,7 @@ module.exports = async (req, res) => {
         name: 'Community & Reddit Consensus',
         icon: 'fa-comments',
         queriesCount: 2,
-        unoptimizedCitationRate: 30,
+        unoptimizedCitationRate: 0,
         optimizedCitationRate: 90,
       },
       {
@@ -347,7 +348,7 @@ module.exports = async (req, res) => {
         name: 'Direct Rival Alternatives',
         icon: 'fa-arrows-split-up-and-left',
         queriesCount: 2,
-        unoptimizedCitationRate: 15,
+        unoptimizedCitationRate: 0,
         optimizedCitationRate: 95,
       },
     ];
@@ -359,7 +360,9 @@ module.exports = async (req, res) => {
       category,
       tags,
       totalQueriesTested: 12,
-      baselineScore: 42,
+      storeCitedQueriesCount: 0,
+      storeCitationShare: '0%',
+      baselineScore: 18,
       optimizedScore: 94,
       dimensions,
       evaluatedQueries,

@@ -16,6 +16,10 @@
   ],
   "rewrites": [
     {
+      "source": "/llms.txt",
+      "destination": "/api/llms-txt"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/public/index.html"
     }

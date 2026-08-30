@@ -1,11 +1,75 @@
-module.exports = async (req, res) => {
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+export interface QueryTaxonomy {
+  id: string;
+  dimensionId: string;
+  dimensionName: string;
+  dimensionIcon: string;
+  queryText: string;
+  engine: string;
+  whyWon: string;
+}
+
+export interface BrandInfo {
+  name: string;
+  domain?: string;
+}
+
+export interface EvaluatedQuery extends QueryTaxonomy {
+  topCitedBrand: string;
+  sources: string[];
+}
+
+export interface Competitor {
+  name: string;
+  websiteUrl: string;
+  canonicalDomain: string;
+  rank: number;
+  score: number;
+  queriesCitedCount: number;
+  totalQueriesTested: number;
+  citationShare: string;
+  citationShareLabel: string;
+  relevanceConfidence: string;
+}
+
+export interface Dimension {
+  id: string;
+  name: string;
+  icon: string;
+  queriesCount: number;
+  unoptimizedCitationRate: number;
+  optimizedCitationRate: number;
+}
+
+export interface AuditResponse {
+  success: boolean;
+  shopDomain?: string;
+  productTitle?: string;
+  category?: string;
+  tags?: string[];
+  totalQueriesTested?: number;
+  storeCitedQueriesCount?: number;
+  storeCitationShare?: string;
+  baselineScore?: number;
+  optimizedScore?: number;
+  dimensions?: Dimension[];
+  evaluatedQueries?: EvaluatedQuery[];
+  competitors?: Competitor[];
+  totalCompetitorsFound?: number;
+  timestamp?: string;
+  error?: string;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.status(200).end();
+    return;
   }
 
   try {
@@ -20,7 +84,7 @@ module.exports = async (req, res) => {
     const tag2 = tags[1] || 'durable';
 
     // 1. Define the 12 Real Intent Queries across 6 Dimensions
-    const queryTaxonomy = [
+    const queryTaxonomy: QueryTaxonomy[] = [
       // Dimension 1: Direct Commercial Intent
       {
         id: 'q1',
@@ -145,7 +209,7 @@ module.exports = async (req, res) => {
     // 2. Execute All 12 Queries Concurrently via Promise.allSettled
     const queryPromises = queryTaxonomy.map(async (q) => {
       let responseText = '';
-      let citations = [];
+      let citations: string[] = [];
 
       if (q.engine.includes('Perplexity') && process.env.PERPLEXITY_API_KEY) {
         try {
@@ -164,11 +228,11 @@ module.exports = async (req, res) => {
             }),
           });
           if (pplxRes.ok) {
-            const data = await pplxRes.json();
+            const data: any = await pplxRes.json();
             responseText = data.choices?.[0]?.message?.content || '';
             citations = data.citations || [];
           }
-        } catch (err) {
+        } catch (err: any) {
           console.warn(`[Audit API] Perplexity error for ${q.id}:`, err.message);
         }
       } else if (process.env.GEMINI_API_KEY) {
@@ -183,12 +247,12 @@ module.exports = async (req, res) => {
             }),
           });
           if (geminiRes.ok) {
-            const data = await geminiRes.json();
+            const data: any = await geminiRes.json();
             responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
             const chunks = data.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-            citations = chunks.map((c) => c.web?.uri).filter(Boolean);
+            citations = chunks.map((c: any) => c.web?.uri).filter(Boolean);
           }
-        } catch (err) {
+        } catch (err: any) {
           console.warn(`[Audit API] Gemini error for ${q.id}:`, err.message);
         }
       }
@@ -217,13 +281,15 @@ module.exports = async (req, res) => {
       'coffeebrewshub.com', 'pulled.coffee'
     ]);
 
-    const domainMap = new Map();
+    const domainMap = new Map<string, { brandName: string; count: number; url: string }>();
     const cleanStoreDomain = shopDomain.toLowerCase().replace('.myshopify.com', '');
 
     // First seed with known authentic benchmark rivals for the category
     const benchmarks = getCategoryBenchmarks(category);
     benchmarks.forEach((fb) => {
-      domainMap.set(fb.domain, { brandName: fb.name, count: 10, url: `https://${fb.domain}` });
+      if (fb.domain) {
+        domainMap.set(fb.domain, { brandName: fb.name, count: 10, url: `https://${fb.domain}` });
+      }
     });
 
     // Merge in live extracted brands from AI grounding
@@ -232,7 +298,7 @@ module.exports = async (req, res) => {
         const item = resItem.value;
 
         // Process Citations
-        item.citations.forEach((urlStr) => {
+        item.citations.forEach((urlStr: string) => {
           try {
             const parsed = new URL(urlStr.startsWith('http') ? urlStr : `https://${urlStr}`);
             const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
@@ -242,14 +308,15 @@ module.exports = async (req, res) => {
                 if (!domainMap.has(hostname)) {
                   domainMap.set(hostname, { brandName, count: 0, url: parsed.href });
                 }
-                domainMap.get(hostname).count += 3;
+                const entry = domainMap.get(hostname);
+                if (entry) entry.count += 3;
               }
             }
           } catch {}
         });
 
         // Process Extracted Brands
-        item.extractedBrands.forEach((b) => {
+        item.extractedBrands.forEach((b: BrandInfo) => {
           if (isValidBrandName(b.name)) {
             const slug = b.name.toLowerCase().replace(/[^a-z0-9]/g, '');
             const hostname = b.domain || `${slug}.com`;
@@ -257,7 +324,8 @@ module.exports = async (req, res) => {
               if (!domainMap.has(hostname)) {
                 domainMap.set(hostname, { brandName: b.name, count: 0, url: `https://${hostname}` });
               }
-              domainMap.get(hostname).count += 4;
+              const entry = domainMap.get(hostname);
+              if (entry) entry.count += 4;
             }
           }
         });
@@ -268,7 +336,7 @@ module.exports = async (req, res) => {
       .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 10);
 
-    const formattedCompetitors = sorted.map(([domain, data], i) => {
+    const formattedCompetitors: Competitor[] = sorted.map(([domain, data], i) => {
       const queriesWon = Math.max(10 - Math.floor(i * 0.7), 2);
       const sharePct = Math.round((queriesWon / 12) * 100);
 
@@ -287,8 +355,8 @@ module.exports = async (req, res) => {
     });
 
     // 4. Map the 12 Real Evaluated Queries with Live Output
-    const evaluatedQueries = queryTaxonomy.map((q, idx) => {
-      const liveRes = liveQueryResults[idx]?.status === 'fulfilled' ? liveQueryResults[idx].value : null;
+    const evaluatedQueries: EvaluatedQuery[] = queryTaxonomy.map((q, idx) => {
+      const liveRes = liveQueryResults[idx]?.status === 'fulfilled' ? (liveQueryResults[idx] as PromiseFulfilledResult<any>).value : null;
       const compWinner = formattedCompetitors[idx % formattedCompetitors.length];
       const source1 = liveRes?.citations?.[0] || 'https://wirecutter.nytimes.com';
       const source2 = compWinner?.websiteUrl || 'https://reddit.com/r/reviews';
@@ -301,8 +369,7 @@ module.exports = async (req, res) => {
     });
 
     // 5. Dimension Summary (6 Dimensions, 2 queries each)
-    // For an unoptimized store, baseline citations across all 6 dimensions is 0%
-    const dimensions = [
+    const dimensions: Dimension[] = [
       {
         id: 'dim_commercial',
         name: 'Direct Commercial Intent',
@@ -353,7 +420,7 @@ module.exports = async (req, res) => {
       },
     ];
 
-    return res.status(200).json({
+    const responseData: AuditResponse = {
       success: true,
       shopDomain,
       productTitle,
@@ -369,29 +436,31 @@ module.exports = async (req, res) => {
       competitors: formattedCompetitors,
       totalCompetitorsFound: formattedCompetitors.length,
       timestamp: new Date().toISOString(),
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
-};
+    };
 
-function isNoise(domain, noiseSet) {
+    res.status(200).json(responseData);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+function isNoise(domain: string, noiseSet: Set<string>): boolean {
   for (const n of noiseSet) {
     if (domain === n || domain.endsWith('.' + n)) return true;
   }
   return false;
 }
 
-function inferBrand(domain) {
+function inferBrand(domain: string): string {
   const p = domain.split('.')[0];
   return p.charAt(0).toUpperCase() + p.slice(1);
 }
 
-function isValidBrandName(str) {
+function isValidBrandName(str: string | undefined | null): boolean {
   if (!str || typeof str !== 'string') return false;
   const s = str.trim().toLowerCase();
   if (s.length < 3 || s.length > 25) return false;
-  if (/\d/.test(s)) return false; // Brand names shouldn't be "30 days", "7 days", "10-day"
+  if (/\d/.test(s)) return false; 
 
   const BANNED_WORDS = [
     'day', 'days', 'fee', 'fees', 'shipping', 'delivery', 'receiving', 'restocking',
@@ -407,10 +476,10 @@ function isValidBrandName(str) {
   return true;
 }
 
-function extractBrands(text) {
-  const brands = [];
+function extractBrands(text: string): BrandInfo[] {
+  const brands: BrandInfo[] = [];
 
-  const KNOWN_BRAND_MAP = {
+  const KNOWN_BRAND_MAP: Record<string, BrandInfo> = {
     'breville': { name: 'Breville', domain: 'breville.com' },
     'baratza': { name: 'Baratza', domain: 'baratza.com' },
     'fellow': { name: 'Fellow Products', domain: 'fellowproducts.com' },
@@ -450,7 +519,7 @@ function extractBrands(text) {
   return brands;
 }
 
-function getCategoryBenchmarks(category) {
+function getCategoryBenchmarks(category?: string): BrandInfo[] {
   const cat = (category || '').toLowerCase();
   if (cat.includes('coffee') || cat.includes('tea')) {
     return [

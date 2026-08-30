@@ -1,8 +1,20 @@
-module.exports = async (req, res) => {
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+interface SentinelReport {
+  jobName: string;
+  status: string;
+  executionTime: string;
+  storesEvaluatedCount: number;
+  storesWithDriftDetected: number;
+  summary: string;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json');
 
   try {
-    const sentinelReport = {
+    // 1. Weekly Health Check & Citation Drift Evaluation
+    const sentinelReport: SentinelReport = {
       jobName: 'Weekly Citation Drift Sentinel',
       status: 'HEALTHY',
       executionTime: new Date().toISOString(),
@@ -15,7 +27,7 @@ module.exports = async (req, res) => {
       success: true,
       sentinelReport,
     });
-  } catch (err) {
+  } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }
-};
+}

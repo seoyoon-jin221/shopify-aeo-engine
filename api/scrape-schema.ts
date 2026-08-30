@@ -1,4 +1,34 @@
-module.exports = async (req, res) => {
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+interface SchemaFeatures {
+  hasMerchantReturnPolicy: boolean;
+  hasPriceAndAvailability: boolean;
+  hasSpecs: boolean;
+  hasFaqs: boolean;
+  hasRatings: boolean;
+}
+
+interface SchemaDiff {
+  competitorFound: string[];
+  merchantMissing: string[];
+  gapSummary: string;
+}
+
+interface ScrapeResult {
+  success: boolean;
+  targetUrl?: string;
+  domain?: string;
+  statusCode?: number;
+  hasJsonLd?: boolean;
+  totalJsonLdBlocksScraped?: number;
+  detectedTypes?: string[];
+  schemaFeatures?: SchemaFeatures;
+  rawSampleJsonLd?: string;
+  schemaDiff?: SchemaDiff;
+  error?: string;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -10,10 +40,10 @@ module.exports = async (req, res) => {
 
   try {
     const body = req.body || {};
-    const targetUrl = body.url || req.query.url;
+    const targetUrl = (body.url || req.query.url) as string;
 
     if (!targetUrl) {
-      return res.status(400).json({ success: false, error: 'Missing target URL parameter' });
+      return res.status(400).json({ success: false, error: 'Missing target URL parameter' } as ScrapeResult);
     }
 
     // SSRF & Protocol Validation
@@ -28,7 +58,7 @@ module.exports = async (req, res) => {
     // Reject private IP / loopback hosts
     const PRIVATE_IP_REGEX = /^(localhost|127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|169\.254\.|0\.0\.0\.0|::1|fc00:|fe80:)/i;
     if (PRIVATE_IP_REGEX.test(domain)) {
-      return res.status(400).json({ success: false, error: 'Target URL resolved to private or restricted network' });
+      return res.status(400).json({ success: false, error: 'Target URL resolved to private or restricted network' } as ScrapeResult);
     }
 
     let html = '';
@@ -54,13 +84,13 @@ module.exports = async (req, res) => {
         const text = await response.text();
         html = text.slice(0, 1.5 * 1024 * 1024);
       }
-    } catch (fetchErr) {
+    } catch (fetchErr: any) {
       console.warn(`[scrape-schema] Live fetch warning for ${domain}:`, fetchErr.message);
     }
 
     // Parse Live JSON-LD
-    const jsonLdScripts = [];
-    const detectedTypes = new Set();
+    const jsonLdScripts: any[] = [];
+    const detectedTypes = new Set<string>();
 
     if (html) {
       const regex = /<script\s+[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
@@ -82,15 +112,15 @@ module.exports = async (req, res) => {
       }
     }
 
-    let productGraph = null;
-    let returnPolicyGraph = null;
-    let faqGraph = null;
-    let ratingsGraph = null;
+    let productGraph: any = null;
+    let returnPolicyGraph: any = null;
+    let faqGraph: any = null;
+    let ratingsGraph: any = null;
 
     jsonLdScripts.forEach((item) => {
       const type = item['@type'];
       if (type) {
-        if (Array.isArray(type)) type.forEach((t) => detectedTypes.add(t));
+        if (Array.isArray(type)) type.forEach((t: string) => detectedTypes.add(t));
         else detectedTypes.add(type);
       }
 
@@ -113,7 +143,7 @@ module.exports = async (req, res) => {
     const hasFaqs = !!faqGraph;
     const hasRatings = !!ratingsGraph || !!productGraph?.aggregateRating;
 
-    const presentInCompetitor = [];
+    const presentInCompetitor: string[] = [];
     if (hasMerchantReturnPolicy) presentInCompetitor.push('Verified MerchantReturnPolicy in JSON-LD');
     if (hasPriceAndAvailability) presentInCompetitor.push('Structured Offer & Real-Time Price/Availability Schema');
     if (hasSpecs) presentInCompetitor.push('Structured additionalProperty Spec Table');
@@ -130,7 +160,7 @@ module.exports = async (req, res) => {
       ? JSON.stringify(jsonLdScripts[0], null, 2)
       : `// Live HTTP Scrape Report for ${domain} (HTTP ${statusCode})\n// Status: Active website online\n// No <script type="application/ld+json"> blocks found in root HTML head.\n// Competitor is cited based on organic backlink and domain authority.`;
 
-    return res.status(200).json({
+    const result: ScrapeResult = {
       success: true,
       targetUrl: parsed.href,
       domain,
@@ -157,8 +187,10 @@ module.exports = async (req, res) => {
           ? `Scraped ${jsonLdScripts.length} live JSON-LD blocks from ${domain}. AI search crawlers cite them because their structured graphs provide verified product and return policy guarantees.`
           : `Fetched live HTML from ${domain} (HTTP ${statusCode}). Competitor ranks in AI search results based on domain reputation and crawlable product tables.`,
       },
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
+    };
+
+    return res.status(200).json(result);
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message } as ScrapeResult);
   }
-};
+}

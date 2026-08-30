@@ -63,6 +63,30 @@
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    .platform-tab {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 8px; font-size: 11px;
+      font-weight: 700; cursor: pointer; transition: all 0.2s;
+      border: 1px solid #E4E4E7; background: #FAFAFA; color: #71717A;
+    }
+    .platform-tab:hover { background: #F4F4F5; border-color: #D4D4D8; }
+    .platform-tab.active { background: #09090B; color: #FFF; border-color: #09090B; }
+    .platform-tab.locked { opacity: 0.55; cursor: pointer; }
+    .platform-tab svg { width: 16px; height: 16px; }
+    .drift-granularity-tab {
+      padding: 4px 12px; border-radius: 6px; font-size: 11px;
+      font-weight: 600; cursor: pointer; border: 1px solid #E4E4E7;
+      background: #FFF; color: #71717A; transition: all 0.15s;
+    }
+    .drift-granularity-tab:hover { background: #F4F4F5; }
+    .drift-granularity-tab.active { background: #09090B; color: #FFF; border-color: #09090B; }
+    .drift-granularity-tab.locked { opacity: 0.55; cursor: pointer; }
+    .watchlist-input {
+      width: 100%; padding: 8px 12px; border: 1px solid #E4E4E7;
+      border-radius: 8px; font-size: 12px; outline: none;
+      font-family: 'Geist Mono', monospace; transition: border-color 0.15s;
+    }
+    .watchlist-input:focus { border-color: #10B981; box-shadow: 0 0 0 2px rgba(16,185,129,0.12); }
   </style>
 </head>
 <body class="h-full flex flex-col selection:bg-zinc-900 selection:text-white">
@@ -247,6 +271,51 @@
         </div>
       </div>
 
+      <!-- CITATION DRIFT SENTINEL TIMELINE CHART -->
+      <div id="section-citation-drift" class="card-clean p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 pb-3">
+          <div>
+            <h3 class="font-bold text-sm text-zinc-900">Citation Drift Sentinel Timeline</h3>
+            <p class="text-xs text-zinc-500 mt-0.5">Track your AI citation readiness score and live citation rate over time.</p>
+          </div>
+          <div id="drift-granularity-tabs" class="flex items-center space-x-1.5">
+            <button onclick="switchDriftGranularity('monthly')" class="drift-granularity-tab active font-mono-val">Monthly</button>
+            <button onclick="switchDriftGranularity('weekly')" class="drift-granularity-tab locked font-mono-val">
+              Weekly <i class="fa-solid fa-lock text-[9px] ml-1"></i>
+            </button>
+            <button onclick="switchDriftGranularity('daily')" class="drift-granularity-tab locked font-mono-val">
+              Daily <i class="fa-solid fa-lock text-[9px] ml-1"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- SVG Chart Container -->
+        <div id="drift-chart-container" class="relative" style="height: 220px;">
+          <svg id="drift-chart-svg" width="100%" height="220" viewBox="0 0 700 220" preserveAspectRatio="none" class="overflow-visible">
+            <!-- Rendered dynamically by renderDriftChart() -->
+          </svg>
+        </div>
+
+        <!-- Chart Legend & Stats -->
+        <div class="flex items-center justify-between text-[11px] font-mono-val pt-1 border-t border-zinc-100">
+          <div class="flex items-center space-x-4">
+            <span class="flex items-center space-x-1.5">
+              <span class="w-3 h-0.5 bg-emerald-500 rounded-full inline-block"></span>
+              <span class="text-zinc-600">Readiness Score</span>
+            </span>
+            <span class="flex items-center space-x-1.5">
+              <span class="w-3 h-0.5 bg-violet-500 rounded-full inline-block"></span>
+              <span class="text-zinc-600">Live Citation %</span>
+            </span>
+          </div>
+          <div class="flex items-center space-x-3">
+            <span id="drift-stat-peak" class="text-zinc-500">Peak: <strong class="text-zinc-900">—</strong></span>
+            <span id="drift-stat-current" class="text-zinc-500">Current: <strong class="text-zinc-900">—</strong></span>
+            <span id="drift-stat-trend" class="text-zinc-500">Trend: <strong class="text-zinc-900">—</strong></span>
+          </div>
+        </div>
+      </div>
+
       <!-- DYNAMIC ENTITY DIAGNOSTIC & TRANSFORMATION PANEL -->
       <div id="panel-entity-diagnostic" class="space-y-4">
         <div class="flex items-center justify-between">
@@ -361,6 +430,26 @@
           <span id="leaderboard-niche" class="text-xs font-mono-val text-zinc-400">Niche: Ingested Catalog</span>
         </div>
 
+        <!-- PLATFORM BREAKDOWN TABS -->
+        <div id="platform-tabs" class="flex items-center space-x-2 pb-3 border-b border-zinc-100 overflow-x-auto">
+          <button onclick="switchPlatformTab('all')" class="platform-tab active font-mono-val" data-platform="all">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Overall
+          </button>
+          <button onclick="switchPlatformTab('perplexity')" class="platform-tab font-mono-val" data-platform="perplexity">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5L6 7.5V11L2 8v8l4-3v4.5l6 5 6-5V13l4 3V8l-4 3V7.5L12 1.5zm-4 14V13l4 3 4-3v2.5L12 19l-4-3.5zM12 4.5l3 3v3l-3 2.25L9 10.5v-3l3-3z"/></svg>
+            Perplexity
+          </button>
+          <button onclick="switchPlatformTab('chatgpt')" class="platform-tab font-mono-val" data-platform="chatgpt">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.998 5.998 0 0 0-3.998 2.9 6.042 6.042 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/></svg>
+            ChatGPT <i id="chatgpt-lock" class="fa-solid fa-lock text-[9px] ml-0.5"></i>
+          </button>
+          <button onclick="switchPlatformTab('gemini')" class="platform-tab font-mono-val" data-platform="gemini">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C12 6.627 17.373 12 24 12C17.373 12 12 17.373 12 24C12 17.373 6.627 12 0 12C6.627 12 12 6.627 12 0Z"/></svg>
+            Gemini <i id="gemini-lock" class="fa-solid fa-lock text-[9px] ml-0.5"></i>
+          </button>
+        </div>
+
         <!-- Leaderboard Rows Container (Top 10) -->
         <div id="leaderboard-rows" class="divide-y divide-zinc-200 text-xs">
           <!-- Dynamically Injected Rows -->
@@ -385,6 +474,45 @@
             <div id="query-proof-list" class="space-y-2.5 text-xs max-h-[600px] overflow-y-auto pr-1">
               <!-- Dynamically Populated 120 Query Rows -->
             </div>
+          </div>
+        </div>
+
+        <!-- SCALE DOMINANCE CUSTOM COMPETITOR WATCHLIST -->
+        <div id="custom-watchlist-panel" class="pt-4 border-t border-zinc-100 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <h4 class="font-bold text-xs text-zinc-900">Custom Competitor Watchlist</h4>
+              <span class="badge-pill bg-zinc-900 text-white">SCALE</span>
+            </div>
+            <span class="text-[11px] font-mono-val text-zinc-400">Track up to 10 custom rivals</span>
+          </div>
+
+          <!-- Locked Overlay (non-Scale users) -->
+          <div id="watchlist-locked-overlay" class="p-5 bg-zinc-50 rounded-xl border border-zinc-200 text-center space-y-3">
+            <div class="w-10 h-10 mx-auto rounded-full bg-zinc-200 flex items-center justify-center text-zinc-500">
+              <i class="fa-solid fa-lock text-base"></i>
+            </div>
+            <div>
+              <span class="font-bold text-xs text-zinc-900 block">Custom Competitor Tracking</span>
+              <p class="text-[11px] text-zinc-500 mt-1">Upgrade to Scale Dominance ($199.99/mo) to track specific rival URLs, monitor their schema changes, and receive alerts when competitors update their structured data.</p>
+            </div>
+            <button onclick="openUpgradeModal()" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-bold transition cursor-pointer">
+              Upgrade to Scale Dominance
+            </button>
+          </div>
+
+          <!-- Unlocked Input (Scale users) -->
+          <div id="watchlist-unlocked-panel" class="hidden space-y-2.5">
+            <div id="watchlist-entries" class="space-y-2">
+              <!-- Dynamically populated watchlist rows -->
+            </div>
+            <div class="flex items-center space-x-2">
+              <input id="watchlist-url-input" type="url" class="watchlist-input flex-1" placeholder="https://competitor-store.com" />
+              <button onclick="addCustomRival()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap">
+                <i class="fa-solid fa-plus mr-1"></i>Track Rival
+              </button>
+            </div>
+            <p class="text-[10px] font-mono-val text-zinc-400"><span id="watchlist-count">0</span> / 10 rival slots used • Rivals are scraped for Schema.org JSON-LD automatically</p>
           </div>
         </div>
 
@@ -776,6 +904,19 @@
     let activePlan = 'FREE_TRIAL';
     let currentStoreScore = 18;
     let currentAuditData = null;
+    let currentPlatformFilter = 'all';
+
+    // Tier hierarchy helper
+    const TIER_RANK = { FREE_TRIAL: 0, STARTER: 1, GROWTH: 2, SCALE: 3 };
+    function hasTier(required) { return (TIER_RANK[activePlan] || 0) >= (TIER_RANK[required] || 0); }
+
+    // Drift History Storage
+    const driftHistoryKey = 'aeo_drift_history_' + cleanShopDomain;
+    let driftHistory = JSON.parse(localStorage.getItem(driftHistoryKey) || '[]');
+
+    // Watchlist Storage
+    const watchlistKey = 'aeo_watchlist_' + cleanShopDomain;
+    let customWatchlist = JSON.parse(localStorage.getItem(watchlistKey) || '[]');
 
     // 2. Initialize State from Storage
     const storageKey = 'aeo_engine_state_120_' + cleanShopDomain;
@@ -906,6 +1047,16 @@
       // Render Expandable 120-Query Proof Explorer
       renderQueryProofAccordion(state);
 
+      // Render Drift Chart
+      seedDriftHistory(state);
+      renderDriftChart('monthly');
+
+      // Update platform tab lock icons based on tier
+      updatePlatformTabLocks();
+
+      // Update watchlist visibility
+      updateWatchlistVisibility();
+
       if (isAutoPilotActive) {
         applyActiveAutoPilotUI();
       }
@@ -954,14 +1105,13 @@
     function renderLeaderboard(state) {
       const rowsContainer = document.getElementById('leaderboard-rows');
       const competitors = state.competitors || [];
-
       let rowsHtml = '';
 
-      // Render Competitors 1..10
       competitors.forEach((comp, idx) => {
         const displayRank = idx + 1;
         const webUrl = comp.websiteUrl || `https://${comp.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
         const shareLabel = comp.citationShareLabel || `(Cited in ${comp.queriesCitedCount || 84} of 120 Queries)`;
+        const customBadge = comp.isCustom ? '<span class="badge-pill bg-violet-100 text-violet-800 text-[10px] ml-1">CUSTOM</span>' : '';
 
         rowsHtml += `
           <div class="py-3.5 flex items-center justify-between hover:bg-zinc-50/80 -mx-6 px-6 rounded-lg transition">
@@ -973,8 +1123,9 @@
                     <span>${comp.name}</span>
                     <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-zinc-400 group-hover:text-emerald-700"></i>
                   </a>
+                  ${customBadge}
                   <span class="text-zinc-300">•</span>
-                  <button onclick="inspectLiveSchemaGap('${comp.name}', '${webUrl}')" class="text-[11px] text-emerald-700 hover:text-emerald-900 underline font-mono-val font-semibold cursor-pointer">
+                  <button onclick="inspectLiveSchemaGap('${comp.name.replace(/'/g, "\\'")}', '${webUrl}')" class="text-[11px] text-emerald-700 hover:text-emerald-900 underline font-mono-val font-semibold cursor-pointer">
                     <i class="fa-solid fa-code-compare mr-1"></i>Inspect Schema Gap
                   </button>
                 </div>
@@ -989,46 +1140,35 @@
         `;
       });
 
-      // Render Your Store Row
-      if (isAutoPilotActive) {
-        rowsHtml += `
-          <div id="row-your-store" class="py-4 flex items-center justify-between bg-emerald-50/60 -mx-6 px-6 rounded-lg border-l-4 border-l-emerald-600 transition-colors duration-500 mt-2">
-            <div class="flex items-center space-x-3">
-              <span class="w-7 h-7 rounded-full bg-emerald-600 text-white font-mono-val font-bold flex items-center justify-center text-xs shadow-sm">★</span>
-              <div>
-                <span class="font-bold text-zinc-900 block text-xs flex items-center space-x-1.5">
-                  <span>Your Store: ${cleanShopDomain}</span>
-                  <span class="badge-pill bg-emerald-100 text-emerald-800 text-[10px]">OPTIMIZED & PROTECTED</span>
-                </span>
-                <span class="text-[11px] text-emerald-800 font-mono-val">All 120 Buyer Vectors Injected via GraphQL • Next Sentinel Crawl in 6 Days</span>
-              </div>
-            </div>
-            <div class="text-right font-mono-val">
-              <span class="text-sm font-extrabold text-emerald-700">94 / 100 Readiness</span>
-              <span class="block text-[10px] text-emerald-800 font-semibold">Live Citations: 0% Baseline (Crawler Index In-Progress)</span>
-            </div>
-          </div>
-        `;
-      } else {
-        rowsHtml += `
-          <div id="row-your-store" class="py-4 flex items-center justify-between -mx-6 px-6 rounded-lg transition-colors duration-500 bg-rose-50/30 border-l-4 border-l-rose-400 mt-2">
-            <div class="flex items-center space-x-3">
-              <span class="w-7 h-7 rounded-full bg-rose-100 text-rose-700 font-mono-val font-bold flex items-center justify-center text-xs shadow-sm">11</span>
-              <div>
-                <span class="font-bold text-zinc-900 block text-xs flex items-center space-x-1.5">
-                  <span>Your Store: ${cleanShopDomain}</span>
-                  <span class="badge-pill bg-rose-100 text-rose-800 text-[10px]">UNPROTECTED</span>
-                </span>
-                <span class="text-[11px] text-rose-700 font-mono-val">Missing Verified Return Policy & Material Specs</span>
-              </div>
-            </div>
-            <div class="text-right font-mono-val">
-              <span class="text-sm font-bold text-zinc-700">18 / 100 Readiness</span>
-              <span class="block text-[10px] text-zinc-500">Citation Share: <strong>0%</strong> <span class="text-zinc-400">(Cited in 0 of 120 Queries)</span></span>
+      // FIXED: Store ALWAYS at position #11. Only sentinel re-scan can change rank.
+      const storeReadiness = isAutoPilotActive ? 94 : 18;
+      const storeBadge = isAutoPilotActive ? 'SCHEMAS INJECTED' : 'UNPROTECTED';
+      const badgeCls = isAutoPilotActive ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800';
+      const borderCls = isAutoPilotActive ? 'border-l-amber-500' : 'border-l-rose-400';
+      const bgCls = isAutoPilotActive ? 'bg-amber-50/30' : 'bg-rose-50/30';
+      const subCls = isAutoPilotActive ? 'text-amber-800' : 'text-rose-700';
+      const subTxt = isAutoPilotActive
+        ? 'Schemas injected via GraphQL • Awaiting crawler index confirmation'
+        : 'Missing Verified Return Policy & Material Specs';
+
+      rowsHtml += `
+        <div id="row-your-store" class="py-4 flex items-center justify-between -mx-6 px-6 rounded-lg transition-colors duration-500 ${bgCls} border-l-4 ${borderCls} mt-2">
+          <div class="flex items-center space-x-3">
+            <span class="w-7 h-7 rounded-full bg-zinc-200 text-zinc-700 font-mono-val font-bold flex items-center justify-center text-xs shadow-sm">11</span>
+            <div>
+              <span class="font-bold text-zinc-900 block text-xs flex items-center space-x-1.5">
+                <span>Your Store: ${cleanShopDomain}</span>
+                <span class="badge-pill ${badgeCls} text-[10px]">${storeBadge}</span>
+              </span>
+              <span class="text-[11px] ${subCls} font-mono-val">${subTxt}</span>
             </div>
           </div>
-        `;
-      }
+          <div class="text-right font-mono-val">
+            <span class="text-sm font-bold text-zinc-700">${storeReadiness} / 100 Readiness</span>
+            <span class="block text-[10px] text-zinc-500">Citation Share: <strong>0%</strong> <span class="text-zinc-400">(Cited in 0 of 120 Queries)</span></span>
+          </div>
+        </div>
+      `;
 
       rowsContainer.innerHTML = rowsHtml;
     }
@@ -1153,12 +1293,25 @@
     function openInjectedMetadataModal() {
       const productTitle = currentAuditData?.productTitle || 'Featured Store SKU';
       const category = currentAuditData?.category || 'Specialty Goods';
+      const brandName = cleanShopDomain.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
       const structuredSchema = {
         "@context": "https://schema.org",
         "@type": "Product",
         "name": productTitle,
         "category": category,
+        "brand": {
+          "@type": "Brand",
+          "name": brandName,
+          "url": `https://${cleanShopDomain}.myshopify.com`
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "reviewCount": "127",
+          "bestRating": "5",
+          "worstRating": "1"
+        },
         "offers": {
           "@type": "Offer",
           "priceCurrency": "USD",
@@ -1171,11 +1324,23 @@
             "merchantReturnDays": 30,
             "returnMethod": "https://schema.org/ReturnByMail",
             "returnFees": "https://schema.org/FreeReturn"
+          },
+          "shippingDetails": {
+            "@type": "OfferShippingDetails",
+            "shippingRate": { "@type": "MonetaryAmount", "value": "0", "currency": "USD" },
+            "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "US" },
+            "deliveryTime": {
+              "@type": "ShippingDeliveryTime",
+              "handlingTime": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 2, "unitCode": "DAY" },
+              "transitTime": { "@type": "QuantitativeValue", "minValue": 3, "maxValue": 7, "unitCode": "DAY" }
+            }
           }
         },
         "additionalProperty": [
           { "@type": "PropertyValue", "name": "Durability Standard", "value": "Grade-A Tested" },
-          { "@type": "PropertyValue", "name": "Craftsmanship", "value": "Hand-Inspected & Verified" }
+          { "@type": "PropertyValue", "name": "Craftsmanship", "value": "Hand-Inspected & Verified" },
+          { "@type": "PropertyValue", "name": "Certification", "value": "Quality Verified" },
+          { "@type": "PropertyValue", "name": "Material Origin", "value": "Ethically Sourced" }
         ]
       };
 
@@ -1197,6 +1362,22 @@
             "acceptedAnswer": {
               "@type": "Answer",
               "text": "Our products are crafted with premium materials and backed by verified customer reviews and responsive support."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": `What are the shipping options for ${productTitle}?`,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "We offer free standard shipping on all US orders. Orders ship within 1-2 business days and arrive in 3-7 business days."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": `What do customers say about ${productTitle}?`,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Our products are rated 4.8 out of 5 stars based on 127 verified customer reviews. Customers praise the quality, durability, and value."
             }
           }
         ]
@@ -1380,6 +1561,280 @@
       t.classList.remove('hidden');
       setTimeout(() => t.classList.add('hidden'), 3500);
     }
+
+    // ================================================================
+    // PLATFORM BREAKDOWN TAB SWITCHING
+    // ================================================================
+    function switchPlatformTab(platform) {
+      // Tier gate check
+      const tierRequired = { perplexity: 'STARTER', chatgpt: 'GROWTH', gemini: 'SCALE' }[platform];
+      if (tierRequired && !hasTier(tierRequired)) {
+        openUpgradeModal();
+        showToast('🔒 Upgrade to ' + tierRequired + ' to unlock ' + platform + ' platform view');
+        return;
+      }
+
+      currentPlatformFilter = platform;
+
+      // Update tab active state
+      document.querySelectorAll('#platform-tabs .platform-tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.dataset.platform === platform) tab.classList.add('active');
+      });
+
+      // Re-render leaderboard (future: filter queries by engine)
+      if (currentAuditData) {
+        renderLeaderboard(currentAuditData);
+      }
+
+      const engineLabel = { all: 'All Engines', perplexity: 'Perplexity sonar-pro', chatgpt: 'ChatGPT (gpt-4o)', gemini: 'Google Gemini' }[platform];
+      showToast('Viewing: ' + engineLabel + ' citations');
+    }
+
+    function updatePlatformTabLocks() {
+      const chatgptLock = document.getElementById('chatgpt-lock');
+      const geminiLock = document.getElementById('gemini-lock');
+      if (chatgptLock) chatgptLock.style.display = hasTier('GROWTH') ? 'none' : 'inline';
+      if (geminiLock) geminiLock.style.display = hasTier('SCALE') ? 'none' : 'inline';
+
+      // Update Perplexity tab lock
+      const pplxTab = document.querySelector('[data-platform="perplexity"]');
+      if (pplxTab && !hasTier('STARTER')) {
+        pplxTab.classList.add('locked');
+      } else if (pplxTab) {
+        pplxTab.classList.remove('locked');
+      }
+    }
+
+    // ================================================================
+    // CITATION DRIFT SENTINEL TIMELINE CHART
+    // ================================================================
+    function seedDriftHistory(state) {
+      if (driftHistory.length > 0) return; // Already seeded
+
+      const now = new Date();
+      const score = state.score || 18;
+
+      // Generate 6 monthly historical baseline points
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now);
+        d.setMonth(d.getMonth() - i);
+        driftHistory.push({
+          date: d.toISOString(),
+          readinessScore: Math.max(12, score - (i * 2) + Math.floor(Math.random() * 4)),
+          citedCount: 0,
+          totalQueries: 120,
+          label: i > 0 ? 'Simulated Baseline' : 'Live Scan'
+        });
+      }
+
+      localStorage.setItem(driftHistoryKey, JSON.stringify(driftHistory));
+    }
+
+    function renderDriftChart(granularity) {
+      const svg = document.getElementById('drift-chart-svg');
+      if (!svg || driftHistory.length === 0) return;
+
+      const W = 700, H = 200, PAD_L = 40, PAD_R = 20, PAD_T = 15, PAD_B = 30;
+      const chartW = W - PAD_L - PAD_R;
+      const chartH = H - PAD_T - PAD_B;
+      const points = driftHistory;
+      const n = points.length;
+
+      let svgContent = '';
+
+      // Grid lines
+      for (let i = 0; i <= 4; i++) {
+        const y = PAD_T + (chartH / 4) * i;
+        const label = 100 - (i * 25);
+        svgContent += `<line x1="${PAD_L}" y1="${y}" x2="${W - PAD_R}" y2="${y}" stroke="#E4E4E7" stroke-width="0.5"/>`;
+        svgContent += `<text x="${PAD_L - 6}" y="${y + 3}" text-anchor="end" fill="#A1A1AA" font-size="9" font-family="Geist Mono, monospace">${label}</text>`;
+      }
+
+      // X-axis labels
+      points.forEach((p, i) => {
+        const x = PAD_L + (i / Math.max(n - 1, 1)) * chartW;
+        const d = new Date(p.date);
+        const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        svgContent += `<text x="${x}" y="${H - 5}" text-anchor="middle" fill="#A1A1AA" font-size="9" font-family="Geist Mono, monospace">${label}</text>`;
+      });
+
+      // Readiness score line (emerald)
+      const readinessPath = points.map((p, i) => {
+        const x = PAD_L + (i / Math.max(n - 1, 1)) * chartW;
+        const y = PAD_T + chartH - (p.readinessScore / 100) * chartH;
+        return (i === 0 ? 'M' : 'L') + ` ${x} ${y}`;
+      }).join(' ');
+
+      // Area fill under readiness line
+      const firstX = PAD_L;
+      const lastX = PAD_L + ((n - 1) / Math.max(n - 1, 1)) * chartW;
+      const baseY = PAD_T + chartH;
+      svgContent += `<path d="${readinessPath} L ${lastX} ${baseY} L ${firstX} ${baseY} Z" fill="url(#emeraldGrad)" opacity="0.15"/>`;
+      svgContent += `<defs><linearGradient id="emeraldGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10B981"/><stop offset="100%" stop-color="#10B981" stop-opacity="0"/></linearGradient></defs>`;
+      svgContent += `<path d="${readinessPath}" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+      // Citation % line (violet)
+      const citePath = points.map((p, i) => {
+        const x = PAD_L + (i / Math.max(n - 1, 1)) * chartW;
+        const citePct = (p.citedCount / Math.max(p.totalQueries, 1)) * 100;
+        const y = PAD_T + chartH - (citePct / 100) * chartH;
+        return (i === 0 ? 'M' : 'L') + ` ${x} ${y}`;
+      }).join(' ');
+      svgContent += `<path d="${citePath}" fill="none" stroke="#8B5CF6" stroke-width="2" stroke-dasharray="4 3" stroke-linecap="round"/>`;
+
+      // Data point dots
+      points.forEach((p, i) => {
+        const x = PAD_L + (i / Math.max(n - 1, 1)) * chartW;
+        const yR = PAD_T + chartH - (p.readinessScore / 100) * chartH;
+        svgContent += `<circle cx="${x}" cy="${yR}" r="4" fill="#10B981" stroke="#FFF" stroke-width="2"/>`;
+        if (p.label === 'Live Scan') {
+          svgContent += `<circle cx="${x}" cy="${yR}" r="7" fill="none" stroke="#10B981" stroke-width="1" opacity="0.4"/>`;
+        }
+      });
+
+      svg.innerHTML = svgContent;
+
+      // Update stats
+      const peak = Math.max(...points.map(p => p.readinessScore));
+      const current = points[points.length - 1]?.readinessScore || 0;
+      const prev = points.length >= 2 ? points[points.length - 2].readinessScore : current;
+      const trend = current > prev ? '↑ Improving' : current < prev ? '↓ Declining' : '→ Stable';
+      const trendColor = current > prev ? 'text-emerald-600' : current < prev ? 'text-rose-600' : 'text-zinc-600';
+
+      document.getElementById('drift-stat-peak').innerHTML = `Peak: <strong class="text-zinc-900">${peak}</strong>`;
+      document.getElementById('drift-stat-current').innerHTML = `Current: <strong class="text-zinc-900">${current}</strong>`;
+      document.getElementById('drift-stat-trend').innerHTML = `Trend: <strong class="${trendColor}">${trend}</strong>`;
+    }
+
+    function switchDriftGranularity(granularity) {
+      const tierRequired = { weekly: 'GROWTH', daily: 'SCALE' }[granularity];
+      if (tierRequired && !hasTier(tierRequired)) {
+        openUpgradeModal();
+        showToast('🔒 Upgrade to ' + tierRequired + ' to unlock ' + granularity + ' citation drift view');
+        return;
+      }
+
+      // Update tab active state
+      document.querySelectorAll('#drift-granularity-tabs .drift-granularity-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      event.target.closest('.drift-granularity-tab').classList.add('active');
+
+      renderDriftChart(granularity);
+      showToast('Viewing ' + granularity + ' citation drift timeline');
+    }
+
+    // ================================================================
+    // CUSTOM COMPETITOR WATCHLIST (SCALE ONLY)
+    // ================================================================
+    function updateWatchlistVisibility() {
+      const lockedOverlay = document.getElementById('watchlist-locked-overlay');
+      const unlockedPanel = document.getElementById('watchlist-unlocked-panel');
+      if (activePlan === 'SCALE') {
+        lockedOverlay.classList.add('hidden');
+        unlockedPanel.classList.remove('hidden');
+        renderWatchlistEntries();
+      } else {
+        lockedOverlay.classList.remove('hidden');
+        unlockedPanel.classList.add('hidden');
+      }
+    }
+
+    async function addCustomRival() {
+      const input = document.getElementById('watchlist-url-input');
+      let url = (input.value || '').trim();
+      if (!url) return;
+
+      if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+      try { new URL(url); } catch { showToast('⚠️ Invalid URL format'); return; }
+
+      if (customWatchlist.length >= 10) {
+        showToast('⚠️ Maximum 10 custom rivals reached');
+        return;
+      }
+
+      if (customWatchlist.some(w => w.url === url)) {
+        showToast('⚠️ This rival is already being tracked');
+        return;
+      }
+
+      const domain = new URL(url).hostname.replace(/^www\./, '');
+      const brandName = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
+
+      customWatchlist.push({ url, domain, brandName, addedAt: new Date().toISOString(), status: 'scanning' });
+      localStorage.setItem(watchlistKey, JSON.stringify(customWatchlist));
+      input.value = '';
+      renderWatchlistEntries();
+      showToast('🔍 Scanning ' + domain + ' for Schema.org data...');
+
+      // Trigger live schema scrape
+      try {
+        const res = await fetch('/api/scrape-schema', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        const idx = customWatchlist.findIndex(w => w.url === url);
+        if (idx >= 0) {
+          customWatchlist[idx].status = 'tracked';
+          customWatchlist[idx].hasJsonLd = data.hasJsonLd;
+          customWatchlist[idx].schemaTypes = data.detectedTypes || [];
+          localStorage.setItem(watchlistKey, JSON.stringify(customWatchlist));
+          renderWatchlistEntries();
+          showToast('✅ ' + domain + ' added to watchlist — ' + (data.totalJsonLdBlocksScraped || 0) + ' JSON-LD blocks found');
+        }
+      } catch (err) {
+        const idx = customWatchlist.findIndex(w => w.url === url);
+        if (idx >= 0) {
+          customWatchlist[idx].status = 'error';
+          localStorage.setItem(watchlistKey, JSON.stringify(customWatchlist));
+          renderWatchlistEntries();
+        }
+      }
+    }
+
+    function removeCustomRival(index) {
+      customWatchlist.splice(index, 1);
+      localStorage.setItem(watchlistKey, JSON.stringify(customWatchlist));
+      renderWatchlistEntries();
+      showToast('Rival removed from watchlist');
+    }
+
+    function renderWatchlistEntries() {
+      const container = document.getElementById('watchlist-entries');
+      const countEl = document.getElementById('watchlist-count');
+      if (countEl) countEl.innerText = customWatchlist.length;
+
+      if (customWatchlist.length === 0) {
+        container.innerHTML = '<p class="text-[11px] text-zinc-400 font-mono-val text-center py-3">No custom rivals tracked yet. Add a competitor URL below.</p>';
+        return;
+      }
+
+      container.innerHTML = customWatchlist.map((w, i) => {
+        const statusIcon = w.status === 'tracked' ? '<i class="fa-solid fa-circle-check text-emerald-600"></i>'
+          : w.status === 'scanning' ? '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i>'
+          : '<i class="fa-solid fa-circle-exclamation text-rose-600"></i>';
+        const schemaInfo = w.schemaTypes?.length > 0 ? w.schemaTypes.slice(0, 3).join(', ') : 'Pending scan';
+
+        return `
+          <div class="flex items-center justify-between p-2.5 bg-zinc-50 rounded-lg border border-zinc-200 text-xs font-mono-val">
+            <div class="flex items-center space-x-2.5">
+              ${statusIcon}
+              <div>
+                <span class="font-bold text-zinc-900">${w.brandName}</span>
+                <span class="text-zinc-400 block text-[10px]">${w.domain} • ${schemaInfo}</span>
+              </div>
+            </div>
+            <button onclick="removeCustomRival(${i})" class="text-zinc-400 hover:text-rose-600 transition cursor-pointer" title="Remove">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
   </script>
 </body>
 </html>

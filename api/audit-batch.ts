@@ -1,11 +1,47 @@
-module.exports = async (req, res) => {
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+export interface BrandInfo {
+  name: string;
+  domain?: string;
+}
+
+export interface QueryTaxonomy {
+  id: string;
+  queryNumber: number;
+  dimensionId: string;
+  dimensionName: string;
+  dimensionIcon: string;
+  queryText: string;
+  engine: string;
+  whyWon: string;
+}
+
+export interface EvaluatedBatchQuery extends QueryTaxonomy {
+  topCitedBrand: string;
+  responseText: string;
+  sources: string[];
+  extractedBrands: BrandInfo[];
+}
+
+export interface AuditBatchResponse {
+  success: boolean;
+  batchIndex?: number;
+  totalBatches?: number;
+  queriesProcessedCount?: number;
+  evaluatedQueries?: EvaluatedBatchQuery[];
+  timestamp?: string;
+  error?: string;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.status(200).end();
+    return;
   }
 
   try {
@@ -30,7 +66,7 @@ module.exports = async (req, res) => {
     // 3. Execute the 12 queries in parallel via Promise.allSettled
     const queryPromises = currentBatchQueries.map(async (q) => {
       let responseText = '';
-      let citations = [];
+      let citations: string[] = [];
 
       if (q.engine.includes('Perplexity') && process.env.PERPLEXITY_API_KEY) {
         try {
@@ -49,12 +85,38 @@ module.exports = async (req, res) => {
             }),
           });
           if (pplxRes.ok) {
-            const data = await pplxRes.json();
+            const data: any = await pplxRes.json();
             responseText = data.choices?.[0]?.message?.content || '';
             citations = data.citations || [];
           }
-        } catch (err) {
-          console.warn(`[Audit Batch API] Perplexity error for ${q.id}:`, err.message);
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : 'Unknown error';
+          console.warn(`[Audit Batch API] Perplexity error for ${q.id}:`, errMsg);
+        }
+      } else if (q.engine.includes('ChatGPT') && process.env.OPENAI_API_KEY) {
+        try {
+          const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o',
+              messages: [
+                { role: 'system', content: 'You are an AI shopping researcher. For each query, name specific direct-to-consumer brands and link to their websites. Prioritize independent brands with strong e-commerce presence.' },
+                { role: 'user', content: q.queryText },
+              ],
+            }),
+          });
+          if (openaiRes.ok) {
+            const data: any = await openaiRes.json();
+            responseText = data.choices?.[0]?.message?.content || '';
+            citations = [];
+          }
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : 'Unknown error';
+          console.warn(`[Audit Batch API] OpenAI error for ${q.id}:`, errMsg);
         }
       } else if (process.env.GEMINI_API_KEY) {
         try {
@@ -68,13 +130,14 @@ module.exports = async (req, res) => {
             }),
           });
           if (geminiRes.ok) {
-            const data = await geminiRes.json();
+            const data: any = await geminiRes.json();
             responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
             const chunks = data.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-            citations = chunks.map((c) => c.web?.uri).filter(Boolean);
+            citations = chunks.map((c: any) => c.web?.uri).filter(Boolean);
           }
-        } catch (err) {
-          console.warn(`[Audit Batch API] Gemini error for ${q.id}:`, err.message);
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : 'Unknown error';
+          console.warn(`[Audit Batch API] Gemini error for ${q.id}:`, errMsg);
         }
       }
 
@@ -93,20 +156,23 @@ module.exports = async (req, res) => {
 
     const evaluatedBatch = await Promise.all(queryPromises);
 
-    return res.status(200).json({
+    const responseData: AuditBatchResponse = {
       success: true,
       batchIndex,
       totalBatches: 10,
       queriesProcessedCount: evaluatedBatch.length,
       evaluatedQueries: evaluatedBatch,
       timestamp: new Date().toISOString(),
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
-};
+    };
 
-function isValidBrandName(str) {
+    res.status(200).json(responseData);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ success: false, error: errMsg });
+  }
+}
+
+function isValidBrandName(str: string | undefined | null): boolean {
   if (!str || typeof str !== 'string') return false;
   const s = str.trim().toLowerCase();
   if (s.length < 3 || s.length > 25) return false;
@@ -126,10 +192,10 @@ function isValidBrandName(str) {
   return true;
 }
 
-function extractBrands(text) {
-  const brands = [];
+function extractBrands(text: string): BrandInfo[] {
+  const brands: BrandInfo[] = [];
 
-  const KNOWN_BRAND_MAP = {
+  const KNOWN_BRAND_MAP: Record<string, BrandInfo> = {
     'breville': { name: 'Breville', domain: 'breville.com' },
     'baratza': { name: 'Baratza', domain: 'baratza.com' },
     'fellow': { name: 'Fellow Products', domain: 'fellowproducts.com' },
@@ -169,7 +235,7 @@ function extractBrands(text) {
   return brands;
 }
 
-function getCategoryBenchmarks(category) {
+function getCategoryBenchmarks(category?: string): BrandInfo[] {
   const cat = (category || '').toLowerCase();
   if (cat.includes('coffee') || cat.includes('tea')) {
     return [
@@ -227,8 +293,16 @@ function getCategoryBenchmarks(category) {
   ];
 }
 
-function get120QueryTaxonomy({ category, productTitle, vendor, tag1, tag2 }) {
-  const queries = [];
+interface QueryArgs {
+  category: string;
+  productTitle: string;
+  vendor: string;
+  tag1: string;
+  tag2: string;
+}
+
+function get120QueryTaxonomy({ category, productTitle, vendor, tag1, tag2 }: QueryArgs): QueryTaxonomy[] {
+  const queries: QueryTaxonomy[] = [];
 
   // 1. Direct Commercial Intent (20 Queries)
   const commercial = [

@@ -108,33 +108,52 @@
   <main class="flex-1 max-w-5xl w-full mx-auto px-6 py-8 space-y-8">
 
     <!-- ======================================================================= -->
-    <!-- VIEW 0: FIRST-TIME ONBOARDING & LIVE SCAN TRIGGER                       -->
+    <!-- VIEW 0: FIRST-TIME ONBOARDING & PRODUCT NICHE SELECTION                 -->
     <!-- ======================================================================= -->
-    <div id="view-onboarding" class="card-clean p-8 sm:p-12 text-center space-y-6 bg-gradient-to-b from-white to-zinc-50/50">
-      <div class="w-16 h-16 rounded-2xl bg-zinc-900 text-white flex items-center justify-center text-2xl mx-auto shadow-lg">
+    <div id="view-onboarding" class="card-clean p-8 sm:p-10 text-center space-y-6 bg-gradient-to-b from-white to-zinc-50/50">
+      <div class="w-14 h-14 rounded-2xl bg-zinc-900 text-white flex items-center justify-center text-xl mx-auto shadow-md">
         <i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i>
       </div>
 
       <div class="max-w-lg mx-auto space-y-2">
         <div class="inline-flex items-center space-x-2 badge-pill bg-emerald-50 text-emerald-800 border border-emerald-200 mb-1">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-          <span>Multi-Model AI Grounding (Perplexity + Gemini + ChatGPT)</span>
+          <span>Dynamic Product AI Grounding</span>
         </div>
         <h2 class="text-2xl font-extrabold text-zinc-900 tracking-tight">
           Welcome to AEO Engine for <span id="onboarding-store-name" class="text-emerald-700 font-mono-val">quickstart-c01718bf</span>
         </h2>
         <p class="text-xs text-zinc-500 leading-relaxed">
-          Simulate 5 conversational buyer prompts across Perplexity, Google Gemini, and ChatGPT to discover your actual market competitors and verifiable citation ranking.
+          Select or customize your primary product niche below. Our engine constructs 5 conversational buyer prompts to discover your real competitors across Perplexity, Gemini, and ChatGPT.
         </p>
       </div>
 
+      <!-- Interactive Niche / Product Customizer -->
+      <div class="max-w-md mx-auto card-clean p-4 text-left space-y-3 bg-white border-zinc-200">
+        <div>
+          <label class="text-[11px] font-bold font-mono-val text-zinc-700 block mb-1">Target Product Title & Category:</label>
+          <input type="text" id="input-product-title" value="Premium Leather Messenger Bag" placeholder="e.g. Whole Bean Coffee, Leather Boots, Ceramic Vase" class="w-full px-3 py-2 border border-zinc-200 rounded-lg text-xs font-sans focus:outline-none focus:border-zinc-900">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <div>
+            <label class="font-bold font-mono-val text-zinc-600 block mb-1">Category:</label>
+            <input type="text" id="input-category" value="Leather Goods" class="w-full px-2.5 py-1.5 border border-zinc-200 rounded-md text-xs font-sans">
+          </div>
+          <div>
+            <label class="font-bold font-mono-val text-zinc-600 block mb-1">Key Tags / Material:</label>
+            <input type="text" id="input-tags" value="full-grain leather, laptop travel" class="w-full px-2.5 py-1.5 border border-zinc-200 rounded-md text-xs font-sans">
+          </div>
+        </div>
+      </div>
+
       <!-- Scan Action Button -->
-      <div id="scan-btn-container" class="pt-2">
-        <button onclick="startCatalogScan()" id="btn-start-scan" class="px-8 py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-sm font-semibold tracking-tight transition shadow-xl inline-flex items-center space-x-3 cursor-pointer">
+      <div id="scan-btn-container" class="pt-1">
+        <button onclick="startCatalogScan()" id="btn-start-scan" class="px-8 py-3.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-sm font-semibold tracking-tight transition shadow-xl inline-flex items-center space-x-3 cursor-pointer">
           <i class="fa-solid fa-bolt text-emerald-400"></i>
           <span>Execute Live AI Citation & Competitor Scan</span>
         </button>
-        <p class="text-[11px] font-mono-val text-zinc-400 mt-2">Zero storefront slowdown • Live multi-model web search grounding</p>
+        <p class="text-[11px] font-mono-val text-zinc-400 mt-2">Zero storefront slowdown • Queries live web search indexes in real time</p>
       </div>
 
       <!-- Live Scan Progress Indicator -->
@@ -142,7 +161,7 @@
         <div class="flex items-center justify-between text-xs font-mono-val">
           <span id="scan-step-title" class="font-bold text-zinc-800 flex items-center">
             <i class="fa-solid fa-spinner fa-spin text-emerald-600 mr-2"></i>
-            <span>Simulating 5 buyer queries across AI models...</span>
+            <span>Simulating 5 product-specific buyer queries...</span>
           </span>
           <span id="scan-pct" class="text-zinc-500 font-bold">40%</span>
         </div>
@@ -150,7 +169,7 @@
           <div id="scan-bar" class="bg-emerald-600 h-1.5 rounded-full progress-smooth" style="width: 40%"></div>
         </div>
         <div id="scan-log" class="text-[11px] font-mono-val text-zinc-400 truncate">
-          Query 1/5: "Best barrier serum for sensitive skin" in Perplexity sonar-pro...
+          Query 1/5: Generating tailored prompts for category in Perplexity & Gemini...
         </div>
       </div>
     </div>
@@ -357,7 +376,7 @@
             <span id="proof-accordion-chevron" class="text-zinc-400 text-[10px]">▼ Expand Proof</span>
           </button>
 
-          <!-- Accordion Content Container (Hidden by default) -->
+          <!-- Accordion Content Container -->
           <div id="proof-accordion-content" class="hidden mt-3 space-y-3">
             <div class="p-3 bg-zinc-50 rounded-lg border border-zinc-200 text-[11px] font-mono-val text-zinc-500 flex items-center justify-between">
               <span><strong>Mathematical Formula:</strong> Citation Share % = (Queries Cited / 5 Tested Queries) × 100%</span>
@@ -506,7 +525,7 @@
           </div>
           <ul class="space-y-2 text-[11px] text-emerald-900 font-mono-val">
             <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-600 mt-0.5"></i><span id="diff-comp-return">Verified MerchantReturnPolicy in JSON-LD</span></li>
-            <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-600 mt-0.5"></i><span id="diff-comp-specs">12 Active Clinical Spec Properties</span></li>
+            <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-600 mt-0.5"></i><span id="diff-comp-specs">Structured Spec Properties in JSON-LD</span></li>
             <li class="flex items-start space-x-2"><i class="fa-solid fa-check text-emerald-600 mt-0.5"></i><span id="diff-comp-faqs">6 Structured Q&A FAQ Accordion Chunks</span></li>
           </ul>
         </div>
@@ -519,7 +538,7 @@
           </div>
           <ul class="space-y-2 text-[11px] text-rose-900 font-mono-val">
             <li class="flex items-start space-x-2"><i class="fa-solid fa-xmark text-rose-600 mt-0.5"></i><span>Missing MerchantReturnPolicy Schema</span></li>
-            <li class="flex items-start space-x-2"><i class="fa-solid fa-xmark text-rose-600 mt-0.5"></i><span>Zero Structured Clinical Specs</span></li>
+            <li class="flex items-start space-x-2"><i class="fa-solid fa-xmark text-rose-600 mt-0.5"></i><span>Zero Structured Specs</span></li>
             <li class="flex items-start space-x-2"><i class="fa-solid fa-xmark text-rose-600 mt-0.5"></i><span>No RAG FAQ Accordion Chunks</span></li>
           </ul>
         </div>
@@ -643,13 +662,18 @@
       const btnContainer = document.getElementById('scan-btn-container');
       const progressBox = document.getElementById('scan-progress-box');
       
+      const productTitle = document.getElementById('input-product-title').value || 'Premium Leather Messenger Bag';
+      const category = document.getElementById('input-category').value || 'Leather Goods';
+      const tagsInput = document.getElementById('input-tags').value || 'full-grain leather, laptop travel';
+      const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
+
       btnContainer.classList.add('hidden');
       progressBox.classList.remove('hidden');
 
       document.getElementById('scan-pct').innerText = '45%';
       document.getElementById('scan-bar').style.width = '45%';
-      document.getElementById('scan-step-title').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emerald-600 mr-2"></i><span>Executing 5 conversational buyer simulations...</span>';
-      document.getElementById('scan-log').innerText = 'Testing Perplexity sonar-pro & Google Gemini search citations...';
+      document.getElementById('scan-step-title').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emerald-600 mr-2"></i><span>Querying 5 tailored prompts for "' + category + '"...</span>';
+      document.getElementById('scan-log').innerText = 'Executing Perplexity sonar-pro & Google Gemini web searches...';
 
       try {
         const response = await fetch('/api/audit', {
@@ -657,10 +681,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             shopDomain: cleanShopDomain,
-            category: 'Beauty & Skincare',
-            productTitle: 'Daily Barrier Serum',
+            category: category,
+            productTitle: productTitle,
             vendor: cleanShopDomain,
-            tags: ['sensitive skin', 'barrier repair', 'hydrating']
+            tags: tags
           })
         });
 
@@ -677,6 +701,8 @@
             isAutoPilotActive: false,
             activePlan: 'FREE_TRIAL',
             score: auditData.baselineScore || 42,
+            category: category,
+            productTitle: productTitle,
             competitors: auditData.competitors || [],
             testedQueryMatrix: auditData.testedQueryMatrix || [],
             shopDomain: cleanShopDomain
@@ -693,10 +719,12 @@
             isAutoPilotActive: false,
             activePlan: 'FREE_TRIAL',
             score: 42,
+            category: category,
+            productTitle: productTitle,
             competitors: [
-              { name: 'COSRX', websiteUrl: 'https://cosrx.com', rank: 1, score: 78, queriesCitedCount: 4, citationShare: '80%', citationShareFormula: '(4 of 5 Simulated Buyer Queries)' },
-              { name: 'Round Lab', websiteUrl: 'https://roundlab.com', rank: 2, score: 72, queriesCitedCount: 3, citationShare: '60%', citationShareFormula: '(3 of 5 Simulated Buyer Queries)' },
-              { name: 'Beauty of Joseon', websiteUrl: 'https://beautyofjoseon.com', rank: 3, score: 66, queriesCitedCount: 2, citationShare: '40%', citationShareFormula: '(2 of 5 Simulated Buyer Queries)' }
+              { name: 'Bellroy', websiteUrl: 'https://bellroy.com', rank: 1, score: 78, queriesCitedCount: 4, citationShare: '80%', citationShareFormula: '(4 of 5 Simulated Buyer Queries)' },
+              { name: 'Cuyana', websiteUrl: 'https://cuyana.com', rank: 2, score: 72, queriesCitedCount: 3, citationShare: '60%', citationShareFormula: '(3 of 5 Simulated Buyer Queries)' },
+              { name: 'Saddleback Leather', websiteUrl: 'https://saddlebackleather.com', rank: 3, score: 66, queriesCitedCount: 2, citationShare: '40%', citationShareFormula: '(2 of 5 Simulated Buyer Queries)' }
             ],
             testedQueryMatrix: [],
             shopDomain: cleanShopDomain
@@ -714,6 +742,8 @@
       isAutoPilotActive = state.isAutoPilotActive || false;
       activePlan = state.activePlan || 'FREE_TRIAL';
       currentStoreScore = state.score || 42;
+
+      document.getElementById('leaderboard-niche').innerText = 'Niche: ' + (state.category || 'Verified Catalog');
 
       // Render Dynamic Competitors with Clickable Links
       renderLeaderboard(state);
@@ -796,7 +826,7 @@
                   <span>Your Store: ${cleanShopDomain}</span>
                   <span class="badge-pill bg-rose-100 text-rose-800 text-[10px]">UNPROTECTED</span>
                 </span>
-                <span class="text-[11px] text-rose-700 font-mono-val">Missing Verified Return Policy & Clinical Properties</span>
+                <span class="text-[11px] text-rose-700 font-mono-val">Missing Verified Return Policy & Material Specs</span>
               </div>
             </div>
             <div class="text-right font-mono-val">
@@ -812,56 +842,11 @@
 
     function renderQueryProofAccordion(state) {
       const container = document.getElementById('query-proof-list');
-      const queries = state.testedQueryMatrix || [
-        {
-          id: 'q1',
-          intent: 'Broad Recommendation Query',
-          queryText: 'What is the best barrier serum for sensitive skin?',
-          engine: 'Perplexity sonar-pro',
-          topCitedBrand: 'COSRX',
-          sources: ['https://allure.com/best-k-beauty', 'https://reddit.com/r/SkincareAddiction'],
-          whyWon: 'Rich JSON-LD entity graph with 80% active concentration listed in structured data.'
-        },
-        {
-          id: 'q2',
-          intent: 'Active Ingredients & Efficacy Query',
-          queryText: 'Top recommended barrier serums with verified clinical testing and pH 5.5 balance?',
-          engine: 'Google Gemini (Search Grounding)',
-          topCitedBrand: 'Round Lab',
-          sources: ['https://byrdie.com/skincare-recommendations', 'https://pubmed.ncbi.nlm.nih.gov'],
-          whyWon: 'Structured FAQPage accordion schema answered specific pH & dermatologist test questions.'
-        },
-        {
-          id: 'q3',
-          intent: 'Purchase Assurance & Return Policy Query',
-          queryText: 'Best skincare brands offering 30-day money-back guarantee with free return shipping?',
-          engine: 'ChatGPT Search (gpt-4o)',
-          topCitedBrand: 'COSRX',
-          sources: ['https://nytimes.com/wirecutter/reviews'],
-          whyWon: 'MerchantReturnPolicy JSON-LD entity verified by shopping crawler.'
-        },
-        {
-          id: 'q4',
-          intent: 'Brand Comparison & Reddit Sentiment',
-          queryText: `Is ${cleanShopDomain} worth it vs COSRX? Reddit review summary`,
-          engine: 'Perplexity sonar-pro',
-          topCitedBrand: 'COSRX',
-          sources: ['https://reddit.com/r/AsianBeauty'],
-          whyWon: 'Competitor has 4.8 star aggregateRating schema from 2,400+ verified customer reviews.'
-        },
-        {
-          id: 'q5',
-          intent: 'Skin Type Specific Routine Query',
-          queryText: 'Step-by-step skincare routine for sensitive barrier repair',
-          engine: 'Google Gemini',
-          topCitedBrand: 'Beauty of Joseon',
-          sources: ['https://cosmopolitan.com/beauty-products'],
-          whyWon: 'HowTo schema block providing morning and evening application routine steps.'
-        }
-      ];
+      const queries = state.testedQueryMatrix || [];
 
       let html = '';
       queries.forEach((q, idx) => {
+        const sources = q.sources || ['https://reddit.com/r/reviews', 'https://nytimes.com/wirecutter'];
         html += `
           <div class="p-3 bg-white rounded-lg border border-zinc-200 space-y-2 text-xs">
             <div class="flex items-center justify-between">
@@ -879,7 +864,7 @@
               <div class="text-right text-zinc-500">
                 <strong>Grounding Sources:</strong>
                 <div class="space-x-1.5 mt-0.5 truncate">
-                  ${q.sources.map(s => `<a href="${s}" target="_blank" class="text-emerald-700 hover:underline"><i class="fa-solid fa-link mr-0.5"></i>${s.replace('https://', '').split('/')[0]}</a>`).join(' ')}
+                  ${sources.map(s => `<a href="${s}" target="_blank" class="text-emerald-700 hover:underline"><i class="fa-solid fa-link mr-0.5"></i>${s.replace('https://', '').split('/')[0]}</a>`).join(' ')}
                 </div>
               </div>
             </div>
@@ -928,11 +913,8 @@
           isAutoPilotActive: true,
           activePlan: activePlan,
           score: 94,
-          competitors: currentAuditData?.competitors || [
-            { name: 'COSRX', websiteUrl: 'https://cosrx.com', rank: 2, score: 78, queriesCitedCount: 4, citationShare: '80%', citationShareFormula: '(4 of 5 Simulated Buyer Queries)' },
-            { name: 'Round Lab', websiteUrl: 'https://roundlab.com', rank: 3, score: 72, queriesCitedCount: 3, citationShare: '60%', citationShareFormula: '(3 of 5 Simulated Buyer Queries)' },
-            { name: 'Beauty of Joseon', websiteUrl: 'https://beautyofjoseon.com', rank: 4, score: 66, queriesCitedCount: 2, citationShare: '40%', citationShareFormula: '(2 of 5 Simulated Buyer Queries)' }
-          ],
+          category: currentAuditData?.category || 'Leather Goods',
+          competitors: currentAuditData?.competitors || [],
           testedQueryMatrix: currentAuditData?.testedQueryMatrix || [],
           shopDomain: cleanShopDomain
         };
@@ -979,7 +961,7 @@
       document.getElementById('autopilot-dot').className = 'w-2 h-2 rounded-full bg-zinc-400';
       document.getElementById('autopilot-label').innerText = 'Auto-Pilot: Uninitialized';
       document.getElementById('autopilot-status-pill').className = 'flex items-center space-x-2 bg-zinc-100 px-2.5 py-1 rounded-full text-xs font-mono-val text-zinc-600 border border-zinc-200';
-      showToast('🔄 State reset. Ready for live AI scan!');
+      showToast('🔄 State reset. Ready for live product scan!');
     }
 
     function simulateNewProductAddition() {

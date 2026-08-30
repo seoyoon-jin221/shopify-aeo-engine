@@ -39,7 +39,7 @@ export interface Dimension {
   icon: string;
   queriesCount: number;
   unoptimizedCitationRate: number;
-  optimizedCitationRate: number;
+  optimizedCitationRate: number | null;
 }
 
 export interface AuditResponse {
@@ -52,7 +52,7 @@ export interface AuditResponse {
   storeCitedQueriesCount?: number;
   storeCitationShare?: string;
   baselineScore?: number;
-  optimizedScore?: number;
+  optimizedScore?: number | null;
   dimensions?: Dimension[];
   evaluatedQueries?: EvaluatedQuery[];
   competitors?: Competitor[];
@@ -284,13 +284,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const domainMap = new Map<string, { brandName: string; count: number; url: string }>();
     const cleanStoreDomain = shopDomain.toLowerCase().replace('.myshopify.com', '');
 
-    // First seed with known authentic benchmark rivals for the category
-    const benchmarks = getCategoryBenchmarks(category);
-    benchmarks.forEach((fb) => {
-      if (fb.domain) {
-        domainMap.set(fb.domain, { brandName: fb.name, count: 10, url: `https://${fb.domain}` });
-      }
-    });
+    // Pre-seeding removed: We now rely EXCLUSIVELY on live LLM grounding citations.
 
     // Merge in live extracted brands from AI grounding
     liveQueryResults.forEach((resItem) => {
@@ -336,89 +330,74 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 10);
 
+    const totalQueries = 12;
     const formattedCompetitors: Competitor[] = sorted.map(([domain, data], i) => {
-      const queriesWon = Math.max(10 - Math.floor(i * 0.7), 2);
-      const sharePct = Math.round((queriesWon / 12) * 100);
+      const queriesWon = data.count; // REAL count from citations
+      const sharePct = Math.round((queriesWon / totalQueries) * 100);
+      const score = Math.min(Math.round((queriesWon / totalQueries) * 100), 100);
 
       return {
         name: data.brandName,
-        websiteUrl: `https://${domain}`,
+        websiteUrl: data.url,
         canonicalDomain: domain,
         rank: i + 1,
-        score: Math.max(88 - i * 3, 58),
+        score,
         queriesCitedCount: queriesWon,
-        totalQueriesTested: 12,
+        totalQueriesTested: totalQueries,
         citationShare: `${sharePct}%`,
-        citationShareLabel: `(Cited in ${queriesWon} of 12 Queries)`,
-        relevanceConfidence: i < 3 ? 'VERY_HIGH' : 'HIGH',
+        citationShareLabel: `(Cited in ${queriesWon} of ${totalQueries} Queries)`,
+        relevanceConfidence: queriesWon >= 6 ? 'VERY_HIGH' : queriesWon >= 3 ? 'HIGH' : 'MODERATE',
       };
     });
+
+    let storeCitedQueriesCount = 0;
 
     // 4. Map the 12 Real Evaluated Queries with Live Output
     const evaluatedQueries: EvaluatedQuery[] = queryTaxonomy.map((q, idx) => {
       const liveRes = liveQueryResults[idx]?.status === 'fulfilled' ? (liveQueryResults[idx] as PromiseFulfilledResult<any>).value : null;
       const compWinner = formattedCompetitors[idx % formattedCompetitors.length];
-      const source1 = liveRes?.citations?.[0] || 'https://wirecutter.nytimes.com';
-      const source2 = compWinner?.websiteUrl || 'https://reddit.com/r/reviews';
+      
+      const source1 = liveRes?.citations?.[0] || null;
+      const source2 = liveRes?.citations?.[1] || compWinner?.websiteUrl || null;
+      
+      const isStoreCited = liveRes?.citations?.some((url: string) => url.toLowerCase().includes(cleanStoreDomain));
+      if (isStoreCited) storeCitedQueriesCount++;
 
       return {
         ...q,
         topCitedBrand: compWinner?.name || 'Category Leader',
-        sources: [source1, source2],
+        sources: [source1, source2].filter(Boolean) as string[],
       };
     });
 
     // 5. Dimension Summary (6 Dimensions, 2 queries each)
-    const dimensions: Dimension[] = [
-      {
-        id: 'dim_commercial',
-        name: 'Direct Commercial Intent',
-        icon: 'fa-cart-shopping',
-        queriesCount: 2,
-        unoptimizedCitationRate: 0,
-        optimizedCitationRate: 95,
-      },
-      {
-        id: 'dim_specs',
-        name: 'Material & Tech Specs',
-        icon: 'fa-microchip',
-        queriesCount: 2,
-        unoptimizedCitationRate: 0,
-        optimizedCitationRate: 90,
-      },
-      {
-        id: 'dim_persona',
-        name: 'Problem-Solving & Persona',
-        icon: 'fa-user-check',
-        queriesCount: 2,
-        unoptimizedCitationRate: 0,
-        optimizedCitationRate: 95,
-      },
-      {
-        id: 'dim_assurance',
-        name: 'Assurance & Return Policy',
-        icon: 'fa-shield-halved',
-        queriesCount: 2,
-        unoptimizedCitationRate: 0,
-        optimizedCitationRate: 100,
-      },
-      {
-        id: 'dim_community',
-        name: 'Community & Reddit Consensus',
-        icon: 'fa-comments',
-        queriesCount: 2,
-        unoptimizedCitationRate: 0,
-        optimizedCitationRate: 90,
-      },
-      {
-        id: 'dim_alternatives',
-        name: 'Direct Rival Alternatives',
-        icon: 'fa-arrows-split-up-and-left',
-        queriesCount: 2,
-        unoptimizedCitationRate: 0,
-        optimizedCitationRate: 95,
-      },
+    const baseDimensions = [
+      { id: 'dim_commercial', name: 'Direct Commercial Intent', icon: 'fa-cart-shopping' },
+      { id: 'dim_specs', name: 'Material & Tech Specs', icon: 'fa-microchip' },
+      { id: 'dim_persona', name: 'Problem-Solving & Persona', icon: 'fa-user-check' },
+      { id: 'dim_assurance', name: 'Assurance & Return Policy', icon: 'fa-shield-halved' },
+      { id: 'dim_community', name: 'Community & Reddit Consensus', icon: 'fa-comments' },
+      { id: 'dim_alternatives', name: 'Direct Rival Alternatives', icon: 'fa-arrows-split-up-and-left' },
     ];
+
+    const dimensions: Dimension[] = baseDimensions.map(dim => {
+      const dimQueries = queryTaxonomy.map((q, idx) => ({ q, idx })).filter(item => item.q.dimensionId === dim.id);
+      let citedCount = 0;
+      dimQueries.forEach(({ idx }) => {
+        const liveRes = liveQueryResults[idx]?.status === 'fulfilled' ? (liveQueryResults[idx] as PromiseFulfilledResult<any>).value : null;
+        if (liveRes?.citations?.some((url: string) => url.toLowerCase().includes(cleanStoreDomain))) {
+          citedCount++;
+        }
+      });
+      return {
+        ...dim,
+        queriesCount: dimQueries.length,
+        unoptimizedCitationRate: dimQueries.length > 0 ? Math.round((citedCount / dimQueries.length) * 100) : 0,
+        optimizedCitationRate: null,
+      };
+    });
+
+    const baselineScore = Math.round((storeCitedQueriesCount / totalQueries) * 100);
 
     const responseData: AuditResponse = {
       success: true,
@@ -426,11 +405,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       productTitle,
       category,
       tags,
-      totalQueriesTested: 12,
-      storeCitedQueriesCount: 0,
-      storeCitationShare: '0%',
-      baselineScore: 18,
-      optimizedScore: 94,
+      totalQueriesTested: totalQueries,
+      storeCitedQueriesCount,
+      storeCitationShare: `${baselineScore}%`,
+      baselineScore,
+      optimizedScore: null,
       dimensions,
       evaluatedQueries,
       competitors: formattedCompetitors,

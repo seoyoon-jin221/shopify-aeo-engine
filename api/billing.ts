@@ -33,7 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const body = req.body || {};
     const planTier: string = body.planTier || 'STARTER';
     const shopDomain: string = body.shopDomain || 'quickstart-c01718bf.myshopify.com';
-    const returnUrl: string = body.returnUrl || `https://admin.shopify.com/store/${shopDomain.replace('.myshopify.com', '')}/apps/070a38794fa2ae9e69e443ef405ca16e`;
+    const returnUrl: string = body.returnUrl || `https://admin.shopify.com/store/${shopDomain.replace('.myshopify.com', '')}/apps/${process.env.SHOPIFY_API_KEY || 'app'}`;
 
     const planConfigs: Record<string, PlanConfig> = {
       STARTER: { name: 'AEO Engine Starter Pilot', price: 10.00, trialDays: 14 },
@@ -46,6 +46,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const accessToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN || (req.headers['x-shopify-access-token'] as string);
     let confirmationUrl: string | null = null;
 
+    let graphqlData: any = null;
+
     if (accessToken) {
       const endpoint = `https://${shopDomain}/admin/api/2026-01/graphql.json`;
       const mutation = `
@@ -55,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             returnUrl: $returnUrl
             trialDays: $trialDays
             lineItems: $lineItems
-            test: true
+            test: ${process.env.NODE_ENV !== 'production'}
           ) {
             appSubscription {
               id
@@ -97,17 +99,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
         if (gqlRes.ok) {
-          const data = await gqlRes.json() as any;
-          confirmationUrl = data.data?.appSubscriptionCreate?.confirmationUrl || null;
+          graphqlData = await gqlRes.json();
+          confirmationUrl = graphqlData?.data?.appSubscriptionCreate?.confirmationUrl || null;
         }
       } catch (e: any) {
         console.warn('[billing] Shopify GraphQL Billing API warning:', e.message);
       }
     }
 
-    // Default confirmation URL fallback if no active Shopify API token in dev
     if (!confirmationUrl) {
-      confirmationUrl = `https://${shopDomain}/admin/charges/confirm_recurring_charge?charge_id=trial_14day_${planTier.toLowerCase()}`;
+      return res.status(500).json({ success: false, error: 'Shopify Billing API unavailable. Ensure SHOPIFY_ADMIN_ACCESS_TOKEN is configured.' });
     }
 
     const responseData: BillingResponse = {
@@ -118,7 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       monthlyPrice: planConfig.price,
       trialDays: planConfig.trialDays,
       confirmationUrl,
-      billingStatus: '14_DAY_FREE_TRIAL_PENDING_APPROVAL',
+      billingStatus: graphqlData?.data?.appSubscriptionCreate?.appSubscription?.status || 'UNKNOWN',
       timestamp: new Date().toISOString(),
     };
 

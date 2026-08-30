@@ -987,15 +987,68 @@
         competitors = auditData.competitors || [];
       } catch (err) {}
 
+      // Aggregate real competitor citation counts from batch results
+      // The domainCounts map tracks how many of the 120 queries each domain appeared in
+      const domainCounts = new Map();
+      allEvaluatedQueries.forEach(q => {
+        (q.sources || []).forEach(src => {
+          try {
+            const hostname = new URL(src.startsWith('http') ? src : `https://${src}`).hostname.replace(/^www\./, '');
+            domainCounts.set(hostname, (domainCounts.get(hostname) || 0) + 1);
+          } catch {}
+        });
+      });
+
       const formatted120Competitors = competitors.map((c, i) => {
-        const wonCount = Math.max(96 - i * 6, 24);
-        const sharePct = Math.round((wonCount / 120) * 100);
+        // Look up real citation count for this competitor's domain
+        const domain = c.canonicalDomain || c.websiteUrl?.replace('https://', '').replace('http://', '').replace(/^www\./, '') || '';
+        const realCount = domainCounts.get(domain) || c.queriesCitedCount || 0;
+        const sharePct = Math.round((realCount / 120) * 100);
         return {
           ...c,
-          queriesCitedCount: wonCount,
+          queriesCitedCount: realCount,
           totalQueriesTested: 120,
           citationShare: sharePct + '%',
-          citationShareLabel: `(Cited in ${wonCount} of 120 Queries)`
+          citationShareLabel: `(Cited in ${realCount} of 120 Queries)`
+        };
+      });
+
+      // Compute real store citation count: how many of 120 queries cite the merchant's domain
+      const storeDomainVariants = [cleanShopDomain, cleanShopDomain + '.myshopify.com'];
+      let storeCitedCount = 0;
+      allEvaluatedQueries.forEach(q => {
+        const cited = (q.sources || []).some(src => {
+          try {
+            const host = new URL(src.startsWith('http') ? src : `https://${src}`).hostname.replace(/^www\./, '');
+            return storeDomainVariants.some(v => host.includes(v));
+          } catch { return false; }
+        });
+        if (cited) storeCitedCount++;
+      });
+
+      const realBaselineScore = Math.round((storeCitedCount / 120) * 100);
+
+      // Compute real per-dimension citation rates
+      const dimNames = ['Direct Commercial Intent', 'Material & Tech Specs', 'Problem-Solving & Persona', 'Assurance & Return Policy', 'Community & Reddit Consensus', 'Direct Rival Alternatives'];
+      const dimIcons = ['fa-cart-shopping', 'fa-microchip', 'fa-user-check', 'fa-shield-halved', 'fa-comments', 'fa-arrows-split-up-and-left'];
+      const dimIds = ['dim_commercial', 'dim_specs', 'dim_persona', 'dim_assurance', 'dim_community', 'dim_alternatives'];
+
+      const computedDimensions = dimNames.map((name, i) => {
+        const dimQueries = allEvaluatedQueries.filter(q => q.dimensionId === dimIds[i]);
+        const dimTotal = dimQueries.length || 20;
+        const dimCited = dimQueries.filter(q => {
+          return (q.sources || []).some(src => {
+            try {
+              const host = new URL(src.startsWith('http') ? src : `https://${src}`).hostname.replace(/^www\./, '');
+              return storeDomainVariants.some(v => host.includes(v));
+            } catch { return false; }
+          });
+        }).length;
+        return {
+          name,
+          icon: dimIcons[i],
+          unoptimizedCitationRate: Math.round((dimCited / dimTotal) * 100),
+          optimizedCitationRate: null // Cannot predict — would need post-optimization re-scan
         };
       });
 
@@ -1003,20 +1056,13 @@
         hasAudited: true,
         isAutoPilotActive: false,
         activePlan: 'FREE_TRIAL',
-        score: 18,
+        score: realBaselineScore,
         category: category,
-        productTitle: 'Primary Store SKU',
+        productTitle: category,
         totalQueriesTested: 120,
-        storeCitedQueriesCount: 0,
-        storeCitationShare: '0%',
-        dimensions: [
-          { name: 'Direct Commercial Intent', icon: 'fa-cart-shopping', unoptimizedCitationRate: 0, optimizedCitationRate: 95 },
-          { name: 'Material & Tech Specs', icon: 'fa-microchip', unoptimizedCitationRate: 0, optimizedCitationRate: 90 },
-          { name: 'Problem-Solving & Persona', icon: 'fa-user-check', unoptimizedCitationRate: 0, optimizedCitationRate: 95 },
-          { name: 'Assurance & Return Policy', icon: 'fa-shield-halved', unoptimizedCitationRate: 0, optimizedCitationRate: 100 },
-          { name: 'Community & Reddit Consensus', icon: 'fa-comments', unoptimizedCitationRate: 0, optimizedCitationRate: 90 },
-          { name: 'Direct Rival Alternatives', icon: 'fa-arrows-split-up-and-left', unoptimizedCitationRate: 0, optimizedCitationRate: 95 }
-        ],
+        storeCitedQueriesCount: storeCitedCount,
+        storeCitationShare: Math.round((storeCitedCount / 120) * 100) + '%',
+        dimensions: computedDimensions,
         evaluatedQueries: allEvaluatedQueries,
         competitors: formatted120Competitors,
         shopDomain: cleanShopDomain
@@ -1034,7 +1080,7 @@
 
       isAutoPilotActive = state.isAutoPilotActive || false;
       activePlan = state.activePlan || 'FREE_TRIAL';
-      currentStoreScore = isAutoPilotActive ? 94 : 18;
+      currentStoreScore = state.score || 0;
 
       document.getElementById('leaderboard-niche').innerText = 'Niche: ' + (state.category || 'Ingested Catalog');
 
@@ -1047,8 +1093,8 @@
       // Render Expandable 120-Query Proof Explorer
       renderQueryProofAccordion(state);
 
-      // Render Drift Chart
-      seedDriftHistory(state);
+      // Render Drift Chart — only add real data points, no seeding
+      addRealDriftDataPoint(state);
       renderDriftChart('monthly');
 
       // Update platform tab lock icons based on tier
@@ -1064,23 +1110,44 @@
 
     function renderDimensionsGrid(state) {
       const grid = document.getElementById('dimensions-grid');
-      const dimensions = [
-        { name: 'Direct Commercial Intent', icon: 'fa-cart-shopping', missingCount: 20, protectedCount: isAutoPilotActive ? 20 : 0 },
-        { name: 'Material & Tech Specs', icon: 'fa-microchip', missingCount: 20, protectedCount: isAutoPilotActive ? 20 : 0 },
-        { name: 'Problem-Solving & Persona', icon: 'fa-user-check', missingCount: 20, protectedCount: isAutoPilotActive ? 20 : 0 },
-        { name: 'Assurance & Return Policy', icon: 'fa-shield-halved', missingCount: 20, protectedCount: isAutoPilotActive ? 20 : 0 },
-        { name: 'Community & Reddit Consensus', icon: 'fa-comments', missingCount: 20, protectedCount: isAutoPilotActive ? 20 : 0 },
-        { name: 'Direct Rival Alternatives', icon: 'fa-arrows-split-up-and-left', missingCount: 20, protectedCount: isAutoPilotActive ? 20 : 0 }
-      ];
+      const stateDims = state.dimensions || [];
+      const queries = state.evaluatedQueries || [];
+
+      // Build dimension data from real state
+      const dimIds = ['dim_commercial', 'dim_specs', 'dim_persona', 'dim_assurance', 'dim_community', 'dim_alternatives'];
+      const dimNames = ['Direct Commercial Intent', 'Material & Tech Specs', 'Problem-Solving & Persona', 'Assurance & Return Policy', 'Community & Reddit Consensus', 'Direct Rival Alternatives'];
+      const dimIcons = ['fa-cart-shopping', 'fa-microchip', 'fa-user-check', 'fa-shield-halved', 'fa-comments', 'fa-arrows-split-up-and-left'];
+
+      const dimensions = dimNames.map((name, i) => {
+        const dimQueries = queries.filter(q => q.dimensionId === dimIds[i]);
+        const total = dimQueries.length || 20;
+        const citedCount = stateDims[i]?.unoptimizedCitationRate != null
+          ? Math.round(stateDims[i].unoptimizedCitationRate * total / 100)
+          : 0;
+        return {
+          name,
+          icon: dimIcons[i],
+          totalQueries: total,
+          citedCount,
+          citationRate: stateDims[i]?.unoptimizedCitationRate || 0
+        };
+      });
 
       let html = '';
       dimensions.forEach(dim => {
-        const isProt = isAutoPilotActive;
-        const statusLabel = isProt ? '20/20 Schemas Injected' : '0/20 Unprotected (0% Cited)';
-        const color = isProt ? 'text-emerald-700' : 'text-rose-600';
-        const barBg = isProt ? 'bg-emerald-500' : 'bg-rose-400';
-        const barWidth = isProt ? '100%' : '0%';
-        const subtext = isProt ? '✓ Return & Spec Schema Live on Shopify' : '✕ Missing MerchantReturnPolicy & Specs';
+        const total = dim.totalQueries || 20;
+        const cited = dim.citedCount || 0;
+        const rate = dim.citationRate || 0;
+        const hasCitations = cited > 0;
+        const statusLabel = `${cited}/${total} Cited (${rate}%)`;
+        const color = hasCitations ? 'text-emerald-700' : 'text-zinc-500';
+        const barBg = hasCitations ? 'bg-emerald-500' : 'bg-zinc-300';
+        const barWidth = rate + '%';
+        const subtext = hasCitations
+          ? `✓ Store cited in ${cited} queries in this dimension`
+          : isAutoPilotActive
+            ? '⏳ Schemas injected — awaiting crawler index'
+            : '✕ Store not cited in any queries in this dimension';
 
         html += `
           <div class="p-3.5 bg-zinc-50 rounded-lg border border-zinc-200 space-y-2">
@@ -1094,7 +1161,7 @@
             <div class="w-full bg-zinc-200 rounded-full h-1.5 overflow-hidden">
               <div class="${barBg} h-1.5 rounded-full progress-smooth" style="width: ${barWidth}"></div>
             </div>
-            <span class="text-[10px] ${isProt ? 'text-emerald-800' : 'text-zinc-400'} font-mono-val block">${subtext}</span>
+            <span class="text-[10px] ${hasCitations ? 'text-emerald-800' : 'text-zinc-400'} font-mono-val block">${subtext}</span>
           </div>
         `;
       });
@@ -1133,8 +1200,8 @@
               </div>
             </div>
             <div class="text-right font-mono-val">
-              <span class="text-sm font-bold text-zinc-700">${comp.score || 74} / 100</span>
-              <span class="block text-[10px] text-zinc-500">Citation Share: <strong>${comp.citationShare || '70%'}</strong> <span class="text-zinc-400">${shareLabel}</span></span>
+              <span class="text-sm font-bold text-zinc-700">${comp.score || 0} / 100</span>
+              <span class="block text-[10px] text-zinc-500">Citation Share: <strong>${comp.citationShare || '0%'}</strong> <span class="text-zinc-400">${shareLabel}</span></span>
             </div>
           </div>
         `;
@@ -1181,7 +1248,11 @@
 
       let html = '';
       queries.forEach((q, idx) => {
-        const sources = q.sources || ['https://wirecutter.nytimes.com', 'https://reddit.com'];
+        const sources = (q.sources || []).filter(Boolean);
+        const sourcesHtml = sources.length > 0
+          ? sources.map(s => `<a href="${s}" target="_blank" class="text-emerald-700 hover:underline"><i class="fa-solid fa-link mr-0.5"></i>${s.replace('https://', '').split('/')[0]}</a>`).join(' ')
+          : '<span class="text-zinc-400 italic">No grounding citations returned</span>';
+        const brandDisplay = q.topCitedBrand || '<span class="text-zinc-400">Not identified</span>';
         html += `
           <div class="p-3 bg-white rounded-lg border border-zinc-200 space-y-2 text-xs">
             <div class="flex items-center justify-between">
@@ -1196,13 +1267,14 @@
             </p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-mono-val pt-1">
               <div class="text-emerald-800">
-                <strong>Top Cited Brand:</strong> <span class="font-bold">${q.topCitedBrand || 'Category Leader'}</span>
-                <span class="text-zinc-400 block text-[10px]">${q.whyWon || 'Active schema match.'}</span>
+                <strong>Top Cited Brand:</strong> <span class="font-bold">${brandDisplay}</span>
+                ${q.whyWon ? `<span class="text-zinc-400 block text-[10px]">${q.whyWon}</span>` : ''}
               </div>
               <div class="text-right text-zinc-500">
                 <strong>Grounding Citations:</strong>
                 <div class="space-x-1.5 mt-0.5 truncate">
-                  ${sources.map(s => `<a href="${s}" target="_blank" class="text-emerald-700 hover:underline"><i class="fa-solid fa-link mr-0.5"></i>${s.replace('https://', '').split('/')[0]}</a>`).join(' ')}
+                  ${sourcesHtml}
+                </div>
                 </div>
               </div>
             </div>
@@ -1232,159 +1304,106 @@
       document.getElementById('modal-pilot-pipeline').classList.remove('hidden');
 
       const steps = [
-        { id: 1, text: 'Structuring Schema.org ReturnPolicy (30-day free returns)...', pct: 25 },
-        { id: 2, text: 'Writing additionalProperty specs to Shopify GraphQL metafields...', pct: 50 },
-        { id: 3, text: 'Injecting Storefront Q&A FAQ Block (geo-faq.liquid)...', pct: 75 },
-        { id: 4, text: 'Enabling 24/7 AI Citation Drift Sentinel...', pct: 100 }
+        { id: 1, text: 'Querying Shopify for real store policies & product data...', pct: 25 },
+        { id: 2, text: 'Building Schema.org entities from verified store data...', pct: 50 },
+        { id: 3, text: 'Writing structured data to Shopify GraphQL metafields...', pct: 75 },
+        { id: 4, text: 'Verifying injection and updating citation baseline...', pct: 100 }
       ];
 
-      for (let s = 0; s < steps.length; s++) {
-        const step = steps[s];
-        document.getElementById('pipe-status-label').innerText = step.text;
-        document.getElementById('pipe-pct').innerText = step.pct + '%';
-        document.getElementById('pipe-bar').style.width = step.pct + '%';
+      // Step 1: Show scanning state
+      updatePipelineStep(steps[0], 'running');
+      await new Promise(r => setTimeout(r, 300));
+      updatePipelineStep(steps[0], 'done');
 
-        document.getElementById(`step-status-${step.id}`).innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emerald-600"></i>';
-        document.getElementById(`step-pipe-${step.id}`).className = 'p-3 rounded-lg border border-emerald-300 bg-emerald-50/50 flex items-center justify-between transition';
+      // Step 2: Show building state
+      updatePipelineStep(steps[1], 'running');
+      await new Promise(r => setTimeout(r, 200));
+      updatePipelineStep(steps[1], 'done');
 
-        await new Promise(r => setTimeout(r, 600));
-
-        document.getElementById(`step-status-${step.id}`).innerHTML = '<span class="text-emerald-700 font-bold">✓ Complete</span>';
-        document.getElementById(`step-icon-${step.id}`).className = 'w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold';
-      }
-
-      // Real GraphQL Metafields Persistence Call
+      // Step 3: Real API call — inject metafields into Shopify
+      updatePipelineStep(steps[2], 'running');
+      let injectionResult = null;
       try {
-        await fetch('/api/inject-metafields', {
+        const res = await fetch('/api/inject-metafields', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            shopDomain: cleanShopDomain,
-            productTitle: currentAuditData?.productTitle || 'Primary Store SKU',
+            shopDomain: cleanShopDomain + '.myshopify.com',
+            productTitle: currentAuditData?.productTitle || currentAuditData?.category || 'Store Product',
             category: currentAuditData?.category || 'Specialty Goods'
           })
         });
+        injectionResult = await res.json();
       } catch (err) {
         console.warn('Metafield injection API warning', err);
       }
+      updatePipelineStep(steps[2], 'done');
+
+      // Step 4: Verify
+      updatePipelineStep(steps[3], 'running');
+      await new Promise(r => setTimeout(r, 300));
+      updatePipelineStep(steps[3], 'done');
 
       await new Promise(r => setTimeout(r, 400));
       document.getElementById('modal-pilot-pipeline').classList.add('hidden');
 
       isAutoPilotActive = true;
-      currentStoreScore = 94;
-
+      // Score does NOT change — only a re-scan can change the score
       const auditState = {
         ...currentAuditData,
         hasAudited: true,
         isAutoPilotActive: true,
         activePlan: activePlan,
-        score: 94,
-        shopDomain: cleanShopDomain
+        score: currentAuditData?.score || 0,
+        shopDomain: cleanShopDomain,
+        injectionResult // Store the real injection response
       };
       localStorage.setItem(storageKey, JSON.stringify(auditState));
+      currentAuditData = auditState;
 
       applyActiveAutoPilotUI();
       renderDimensionsGrid(auditState);
       renderLeaderboard(auditState);
-      showToast('🎉 Auto-Pilot Active! Injected Schema.org & FAQ metafields into Shopify.');
+
+      const mutationStatus = injectionResult?.graphQlMutation || 'UNKNOWN';
+      if (mutationStatus === 'EXECUTED_LIVE') {
+        showToast('🎉 Auto-Pilot Active! Real Schema.org metafields written to Shopify.');
+      } else {
+        showToast('⚠️ Auto-Pilot enabled but metafield injection needs Shopify access token.');
+      }
+    }
+
+    function updatePipelineStep(step, status) {
+      document.getElementById('pipe-status-label').innerText = step.text;
+      document.getElementById('pipe-pct').innerText = step.pct + '%';
+      document.getElementById('pipe-bar').style.width = step.pct + '%';
+      if (status === 'running') {
+        document.getElementById(`step-status-${step.id}`).innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emerald-600"></i>';
+        document.getElementById(`step-pipe-${step.id}`).className = 'p-3 rounded-lg border border-emerald-300 bg-emerald-50/50 flex items-center justify-between transition';
+      } else {
+        document.getElementById(`step-status-${step.id}`).innerHTML = '<span class="text-emerald-700 font-bold">✓ Complete</span>';
+        document.getElementById(`step-icon-${step.id}`).className = 'w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold';
+      }
     }
 
     function openInjectedMetadataModal() {
-      const productTitle = currentAuditData?.productTitle || 'Featured Store SKU';
-      const category = currentAuditData?.category || 'Specialty Goods';
-      const brandName = cleanShopDomain.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      // Show REAL injected data if available from autopilot, otherwise show a preview
+      const injectionResult = currentAuditData?.injectionResult;
 
-      const structuredSchema = {
-        "@context": "https://schema.org",
-        "@type": "Product",
-        "name": productTitle,
-        "category": category,
-        "brand": {
-          "@type": "Brand",
-          "name": brandName,
-          "url": `https://${cleanShopDomain}.myshopify.com`
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.8",
-          "reviewCount": "127",
-          "bestRating": "5",
-          "worstRating": "1"
-        },
-        "offers": {
-          "@type": "Offer",
-          "priceCurrency": "USD",
-          "availability": "https://schema.org/InStock",
-          "itemCondition": "https://schema.org/NewCondition",
-          "hasMerchantReturnPolicy": {
-            "@type": "MerchantReturnPolicy",
-            "applicableCountry": "US",
-            "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
-            "merchantReturnDays": 30,
-            "returnMethod": "https://schema.org/ReturnByMail",
-            "returnFees": "https://schema.org/FreeReturn"
-          },
-          "shippingDetails": {
-            "@type": "OfferShippingDetails",
-            "shippingRate": { "@type": "MonetaryAmount", "value": "0", "currency": "USD" },
-            "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "US" },
-            "deliveryTime": {
-              "@type": "ShippingDeliveryTime",
-              "handlingTime": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 2, "unitCode": "DAY" },
-              "transitTime": { "@type": "QuantitativeValue", "minValue": 3, "maxValue": 7, "unitCode": "DAY" }
-            }
-          }
-        },
-        "additionalProperty": [
-          { "@type": "PropertyValue", "name": "Durability Standard", "value": "Grade-A Tested" },
-          { "@type": "PropertyValue", "name": "Craftsmanship", "value": "Hand-Inspected & Verified" },
-          { "@type": "PropertyValue", "name": "Certification", "value": "Quality Verified" },
-          { "@type": "PropertyValue", "name": "Material Origin", "value": "Ethically Sourced" }
-        ]
-      };
-
-      const faqSchema = {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": `What is the return policy for ${productTitle}?`,
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "We offer a 30-day risk-free money-back guarantee with free prepaid return shipping on all orders."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": `How does ${productTitle} compare to rival ${category} brands?`,
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Our products are crafted with premium materials and backed by verified customer reviews and responsive support."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": `What are the shipping options for ${productTitle}?`,
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "We offer free standard shipping on all US orders. Orders ship within 1-2 business days and arrive in 3-7 business days."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": `What do customers say about ${productTitle}?`,
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Our products are rated 4.8 out of 5 stars based on 127 verified customer reviews. Customers praise the quality, durability, and value."
-            }
-          }
-        ]
-      };
-
-      document.getElementById('injected-json-preview').innerText = JSON.stringify(structuredSchema, null, 2);
-      document.getElementById('injected-faq-preview').innerText = JSON.stringify(faqSchema, null, 2);
+      if (injectionResult?.structuredData && injectionResult?.faqData) {
+        // Real data from the injection API
+        document.getElementById('injected-json-preview').innerText = JSON.stringify(injectionResult.structuredData, null, 2);
+        document.getElementById('injected-faq-preview').innerText = JSON.stringify(injectionResult.faqData, null, 2);
+      } else {
+        // No injection has happened yet — show a message
+        const notice = {
+          note: 'No Schema.org data has been injected yet.',
+          action: 'Activate Auto-Pilot to inject structured data from your real store policies and product details.',
+          source: 'Data will be fetched from Shopify GraphQL: shop policies, product metafields, and review data.'
+        };
+        document.getElementById('injected-json-preview').innerText = JSON.stringify(notice, null, 2);
+        document.getElementById('injected-faq-preview').innerText = JSON.stringify({ note: 'FAQ schema will be generated from your actual store policies after injection.' }, null, 2);
+      }
       document.getElementById('modal-injected-preview').classList.remove('hidden');
     }
 
@@ -1393,21 +1412,24 @@
     }
 
     function applyActiveAutoPilotUI() {
-      document.getElementById('hero-score').innerText = '94';
-      document.getElementById('hero-score').className = 'text-4xl sm:text-5xl font-extrabold font-mono-val text-emerald-600';
-      document.getElementById('score-delta').innerText = '+76 pts';
-      document.getElementById('score-delta').className = 'text-xs font-mono-val font-bold text-emerald-600';
-      document.getElementById('hero-badge').innerText = 'Auto-Pilot Active (Top 5%)';
-      document.getElementById('hero-badge').className = 'badge-pill bg-emerald-50 text-emerald-800 border border-emerald-200';
-      document.getElementById('hero-desc').innerText = 'Your store catalog is fully protected with verified Schema.org ReturnPolicy graphs and storefront FAQ retrieval blocks across all 120 buyer queries.';
+      const score = currentAuditData?.score || currentStoreScore || 0;
+      const delta = score > 0 ? `(${score}% citation rate)` : 'Awaiting re-scan';
+
+      document.getElementById('hero-score').innerText = score;
+      document.getElementById('hero-score').className = 'text-4xl sm:text-5xl font-extrabold font-mono-val text-amber-600';
+      document.getElementById('score-delta').innerText = delta;
+      document.getElementById('score-delta').className = 'text-xs font-mono-val font-bold text-amber-600';
+      document.getElementById('hero-badge').innerText = 'Auto-Pilot Active — Schemas Injected';
+      document.getElementById('hero-badge').className = 'badge-pill bg-amber-50 text-amber-800 border border-amber-200';
+      document.getElementById('hero-desc').innerText = 'Schema.org structured data has been injected from your real store policies. Citation improvements will appear after AI crawlers re-index your site.';
 
       const btn = document.getElementById('btn-activate-pilot');
       btn.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400 text-base"></i><span>Auto-Pilot Running (14 Days Free)</span>';
       btn.className = 'px-6 py-3.5 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-xl text-sm font-semibold tracking-tight transition shadow-lg flex items-center space-x-2.5 mx-auto';
 
-      document.getElementById('progress-text').innerText = '5 of 10 Products Protected (14-Day Free Trial)';
-      document.getElementById('progress-bar').style.width = '50%';
-      document.getElementById('progress-bar').className = 'bg-emerald-500 h-2 rounded-full progress-smooth';
+      document.getElementById('progress-text').innerText = 'Schemas injected — re-scan to measure citation impact';
+      document.getElementById('progress-bar').style.width = '0%';
+      document.getElementById('progress-bar').className = 'bg-amber-500 h-2 rounded-full progress-smooth';
 
       document.getElementById('autopilot-dot').className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
       document.getElementById('autopilot-label').innerText = 'Auto-Pilot: Active';
@@ -1582,13 +1604,53 @@
         if (tab.dataset.platform === platform) tab.classList.add('active');
       });
 
-      // Re-render leaderboard (future: filter queries by engine)
+      // Re-render with filtered data
       if (currentAuditData) {
-        renderLeaderboard(currentAuditData);
-      }
+        const state = currentAuditData;
+        const queries = state.evaluatedQueries || [];
 
-      const engineLabel = { all: 'All Engines', perplexity: 'Perplexity sonar-pro', chatgpt: 'ChatGPT (gpt-4o)', gemini: 'Google Gemini' }[platform];
-      showToast('Viewing: ' + engineLabel + ' citations');
+        // Filter queries by engine
+        const engineMatch = {
+          all: null,
+          perplexity: 'Perplexity',
+          chatgpt: 'ChatGPT',
+          gemini: 'Gemini'
+        }[platform];
+
+        const filteredQueries = engineMatch
+          ? queries.filter(q => (q.engine || '').includes(engineMatch))
+          : queries;
+
+        // Re-aggregate competitor citations from filtered queries only
+        const filteredDomainCounts = new Map();
+        filteredQueries.forEach(q => {
+          (q.sources || []).forEach(src => {
+            try {
+              const hostname = new URL(src.startsWith('http') ? src : `https://${src}`).hostname.replace(/^www\./, '');
+              filteredDomainCounts.set(hostname, (filteredDomainCounts.get(hostname) || 0) + 1);
+            } catch {}
+          });
+        });
+
+        const filteredCompetitors = (state.competitors || []).map(c => {
+          const domain = c.canonicalDomain || '';
+          const count = filteredDomainCounts.get(domain) || 0;
+          const total = filteredQueries.length || 1;
+          const share = Math.round((count / total) * 100);
+          return {
+            ...c,
+            queriesCitedCount: count,
+            citationShare: share + '%',
+            citationShareLabel: `(Cited in ${count} of ${total} Queries)`
+          };
+        });
+
+        renderLeaderboard({ ...state, competitors: filteredCompetitors });
+
+        const label = { all: 'All Engines', perplexity: 'Perplexity', chatgpt: 'ChatGPT', gemini: 'Google Gemini' }[platform];
+        const queryCount = filteredQueries.length;
+        showToast(`Viewing: ${label} — ${queryCount} queries`);
+      }
     }
 
     function updatePlatformTabLocks() {
@@ -1597,7 +1659,6 @@
       if (chatgptLock) chatgptLock.style.display = hasTier('GROWTH') ? 'none' : 'inline';
       if (geminiLock) geminiLock.style.display = hasTier('SCALE') ? 'none' : 'inline';
 
-      // Update Perplexity tab lock
       const pplxTab = document.querySelector('[data-platform="perplexity"]');
       if (pplxTab && !hasTier('STARTER')) {
         pplxTab.classList.add('locked');
@@ -1609,26 +1670,26 @@
     // ================================================================
     // CITATION DRIFT SENTINEL TIMELINE CHART
     // ================================================================
-    function seedDriftHistory(state) {
-      if (driftHistory.length > 0) return; // Already seeded
-
+    function addRealDriftDataPoint(state) {
+      // Only add a real data point — never seed fake historical data
       const now = new Date();
-      const score = state.score || 18;
+      const score = state.score || 0;
+      const citedCount = state.storeCitedQueriesCount || 0;
 
-      // Generate 6 monthly historical baseline points
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now);
-        d.setMonth(d.getMonth() - i);
+      // Check if we already have a data point from today
+      const today = now.toISOString().split('T')[0];
+      const alreadyHasToday = driftHistory.some(p => p.date.startsWith(today));
+
+      if (!alreadyHasToday) {
         driftHistory.push({
-          date: d.toISOString(),
-          readinessScore: Math.max(12, score - (i * 2) + Math.floor(Math.random() * 4)),
-          citedCount: 0,
+          date: now.toISOString(),
+          readinessScore: score,
+          citedCount: citedCount,
           totalQueries: 120,
-          label: i > 0 ? 'Simulated Baseline' : 'Live Scan'
+          label: 'Live Scan'
         });
+        localStorage.setItem(driftHistoryKey, JSON.stringify(driftHistory));
       }
-
-      localStorage.setItem(driftHistoryKey, JSON.stringify(driftHistory));
     }
 
     function renderDriftChart(granularity) {

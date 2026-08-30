@@ -17,7 +17,7 @@ export interface QueryTaxonomy {
 }
 
 export interface EvaluatedBatchQuery extends QueryTaxonomy {
-  topCitedBrand: string;
+  topCitedBrand: string | null;
   responseText: string;
   sources: string[];
   extractedBrands: BrandInfo[];
@@ -142,14 +142,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       }
 
       const extracted = extractBrands(responseText);
-      const benchmarks = getCategoryBenchmarks(category);
-      const topCitedBrand = extracted[0]?.name || benchmarks[q.queryNumber % benchmarks.length]?.name || 'Industry Leader';
+      const topCitedBrand = extracted[0]?.name || null;
 
       return {
         ...q,
         topCitedBrand,
         responseText: responseText.slice(0, 300),
-        sources: citations.length > 0 ? citations.slice(0, 2) : ['https://wirecutter.nytimes.com', 'https://reddit.com/r/reviews'],
+        sources: citations.slice(0, 2),
         extractedBrands: extracted,
       };
     });

@@ -1,20 +1,28 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "070a38794fa2ae9e69e443ef405ca16e"
-name = "geosync-ai-search-seo"
-application_url = "http://localhost:3000"
+name = "aeo-engine"
+application_url = "https://shopify-aeo-engine-ilrdqwwqi-shopify-aeo-engine.vercel.app"
 embedded = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_products,read_themes,write_products"
+scopes = "read_products,write_products,read_metafields,write_metafields"
 
 [auth]
-redirect_urls = [ "http://localhost:3000/auth/callback" ]
+redirect_urls = [
+  "https://shopify-aeo-engine-ilrdqwwqi-shopify-aeo-engine.vercel.app/auth/callback",
+  "https://shopify-aeo-engine-ilrdqwwqi-shopify-aeo-engine.vercel.app/api/auth/callback"
+]
 
 [webhooks]
 api_version = "2026-10"
 
+  [webhooks.privacy_compliance]
+  customer_data_request_url = "https://shopify-aeo-engine-ilrdqwwqi-shopify-aeo-engine.vercel.app/api/webhooks/compliance"
+  customer_deletion_url = "https://shopify-aeo-engine-ilrdqwwqi-shopify-aeo-engine.vercel.app/api/webhooks/compliance"
+  shop_deletion_url = "https://shopify-aeo-engine-ilrdqwwqi-shopify-aeo-engine.vercel.app/api/webhooks/compliance"
+
 [build]
 include_config_on_deploy = true
-automatically_update_urls_on_dev = true
+automatically_update_urls_on_dev = false

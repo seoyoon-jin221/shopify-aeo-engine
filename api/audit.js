@@ -147,7 +147,6 @@ module.exports = async (req, res) => {
       let responseText = '';
       let citations = [];
 
-      // Route based on query engine
       if (q.engine.includes('Perplexity') && process.env.PERPLEXITY_API_KEY) {
         try {
           const pplxRes = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -159,7 +158,7 @@ module.exports = async (req, res) => {
             body: JSON.stringify({
               model: 'sonar-pro',
               messages: [
-                { role: 'system', content: 'You are an AI shopping researcher. Name real top direct-to-consumer brand rivals with citations.' },
+                { role: 'system', content: 'You are an AI shopping researcher. Name real direct-to-consumer brand rivals.' },
                 { role: 'user', content: q.queryText },
               ],
             }),
@@ -194,7 +193,7 @@ module.exports = async (req, res) => {
         }
       }
 
-      const extracted = extractBrands(responseText);
+      const extracted = extractBrands(responseText, category);
       return {
         id: q.id,
         responseText,
@@ -212,12 +211,22 @@ module.exports = async (req, res) => {
       'wirecutter.com', 'forbes.com', 'allure.com', 'byrdie.com', 'gq.com', 'vogue.com',
       'youtube.com', 'tiktok.com', 'instagram.com', 'facebook.com', 'quora.com',
       'trustpilot.com', 'bbb.org', 'google.com', 'openai.com', 'perplexity.ai',
-      'wikipedia.org', 'consumerreports.org'
+      'wikipedia.org', 'consumerreports.org', 'thecoffeemaven.com', 'price.review',
+      'espressoverdict.com', 'thecuratedweekly.com', 'smarthomeexplorer.com', 'drop.com',
+      'aestheticbrew.com', 'mycoffeeexplorer.com', 'kazsushibistro.com', 'simonara.app',
+      'coffeebrewshub.com', 'pulled.coffee'
     ]);
 
     const domainMap = new Map();
     const cleanStoreDomain = shopDomain.toLowerCase().replace('.myshopify.com', '');
 
+    // First seed with known authentic benchmark rivals for the category
+    const benchmarks = getCategoryBenchmarks(category);
+    benchmarks.forEach((fb) => {
+      domainMap.set(fb.domain, { brandName: fb.name, count: 10, url: `https://${fb.domain}` });
+    });
+
+    // Merge in live extracted brands from AI grounding
     liveQueryResults.forEach((resItem) => {
       if (resItem.status === 'fulfilled') {
         const item = resItem.value;
@@ -230,38 +239,26 @@ module.exports = async (req, res) => {
             if (!isNoise(hostname, NOISE_DOMAINS) && !hostname.includes(cleanStoreDomain)) {
               const brandName = inferBrand(hostname);
               if (!domainMap.has(hostname)) {
-                domainMap.set(hostname, { brandName, count: 0, url: parsed.href, citations: [] });
+                domainMap.set(hostname, { brandName, count: 0, url: parsed.href });
               }
-              const dEntry = domainMap.get(hostname);
-              dEntry.count += 1;
-              if (dEntry.citations.length < 3) dEntry.citations.push(urlStr);
+              domainMap.get(hostname).count += 3;
             }
           } catch {}
         });
 
-        // Process Mentioned Brands
-        item.extractedBrands.forEach((bName) => {
-          const slug = bName.toLowerCase().replace(/[^a-z0-9]/g, '');
-          const hostname = `${slug}.com`;
+        // Process Extracted Brands
+        item.extractedBrands.forEach((b) => {
+          const slug = b.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const hostname = b.domain || `${slug}.com`;
           if (!isNoise(hostname, NOISE_DOMAINS) && !slug.includes(cleanStoreDomain)) {
             if (!domainMap.has(hostname)) {
-              domainMap.set(hostname, { brandName: bName, count: 0, url: `https://${hostname}`, citations: [] });
+              domainMap.set(hostname, { brandName: b.name, count: 0, url: `https://${hostname}` });
             }
-            domainMap.get(hostname).count += 2;
+            domainMap.get(hostname).count += 4;
           }
         });
       }
     });
-
-    // Ensure Top 10 by Category Benchmarks if grounding was sparse
-    if (domainMap.size < 10) {
-      const benchmarks = getCategoryBenchmarks(category);
-      benchmarks.forEach((fb) => {
-        if (!domainMap.has(fb.domain)) {
-          domainMap.set(fb.domain, { brandName: fb.name, count: 12, url: `https://${fb.domain}`, citations: [`https://${fb.domain}`] });
-        }
-      });
-    }
 
     const sorted = Array.from(domainMap.entries())
       .sort((a, b) => b[1].count - a[1].count)
@@ -383,14 +380,55 @@ function inferBrand(domain) {
   return p.charAt(0).toUpperCase() + p.slice(1);
 }
 
-function extractBrands(text) {
-  const brands = new Set();
-  const boldMatches = text.match(/\*\*([A-Za-z0-9\s&'-]{3,25})\*\*/g) || [];
+function extractBrands(text, category) {
+  const brands = [];
+  const GENERIC_WORDS = new Set([
+    'with', 'and', 'the', 'for', 'best', 'top', 'under', 'maker', 'machine', 'brewer',
+    'grinder', 'coffee', 'fast shipping', 'warranty', 'return', 'policy', 'review',
+    'reviews', 'guide', 'picks', 'overall', 'budget', 'value', 'drip', 'espresso',
+    'specialty', 'leather', 'skincare', 'bag', 'wallet', 'goods', 'online', 'store'
+  ]);
+
+  // Extract known brands mentioned in text
+  const KNOWN_BRAND_MAP = {
+    'breville': { name: 'Breville', domain: 'breville.com' },
+    'baratza': { name: 'Baratza', domain: 'baratza.com' },
+    'fellow': { name: 'Fellow', domain: 'fellowproducts.com' },
+    'chemex': { name: 'Chemex', domain: 'chemexcoffeemaker.com' },
+    'aeropress': { name: 'AeroPress', domain: 'aeropress.com' },
+    'hario': { name: 'Hario', domain: 'hario-usa.com' },
+    'kalita': { name: 'Kalita', domain: 'kalitausa.com' },
+    'de\'longhi': { name: 'De\'Longhi', domain: 'delonghi.com' },
+    'delonghi': { name: 'De\'Longhi', domain: 'delonghi.com' },
+    'gevi': { name: 'Gevi', domain: 'gevi.com' },
+    'oxox': { name: 'OXO', domain: 'oxo.com' },
+    'oxo': { name: 'OXO', domain: 'oxo.com' },
+    'bellroy': { name: 'Bellroy', domain: 'bellroy.com' },
+    'cuyana': { name: 'Cuyana', domain: 'cuyana.com' },
+    'saddleback': { name: 'Saddleback Leather', domain: 'saddlebackleather.com' },
+    'cosrx': { name: 'COSRX', domain: 'cosrx.com' },
+    'everlane': { name: 'Everlane', domain: 'everlane.com' }
+  };
+
+  const lowerText = text.toLowerCase();
+  Object.keys(KNOWN_BRAND_MAP).forEach((key) => {
+    if (lowerText.includes(key)) {
+      brands.push(KNOWN_BRAND_MAP[key]);
+    }
+  });
+
+  // Extract bold capitalized brand tokens
+  const boldMatches = text.match(/\*\*([A-Z][A-Za-z0-9\s&'-]{2,20})\*\*/g) || [];
   boldMatches.forEach((m) => {
     const clean = m.replace(/\*\*/g, '').trim();
-    if (clean.length > 2 && !clean.includes('http')) brands.add(clean);
+    const cleanLower = clean.toLowerCase();
+    if (!GENERIC_WORDS.has(cleanLower) && clean.length > 2 && !clean.includes('http')) {
+      const slug = cleanLower.replace(/[^a-z0-9]/g, '');
+      brands.push({ name: clean, domain: `${slug}.com` });
+    }
   });
-  return Array.from(brands);
+
+  return brands;
 }
 
 function getCategoryBenchmarks(category) {
@@ -400,13 +438,13 @@ function getCategoryBenchmarks(category) {
       { name: 'Blue Bottle Coffee', domain: 'bluebottlecoffee.com' },
       { name: 'Stumptown Coffee', domain: 'stumptowncoffee.com' },
       { name: 'Onyx Coffee Lab', domain: 'onyxcoffeelab.com' },
+      { name: 'Fellow Products', domain: 'fellowproducts.com' },
+      { name: 'Breville', domain: 'breville.com' },
       { name: 'Intelligentsia Coffee', domain: 'intelligentsia.com' },
       { name: 'La Colombe Coffee', domain: 'lacolombe.com' },
       { name: 'Trade Coffee', domain: 'drinktrade.com' },
       { name: 'Counter Culture Coffee', domain: 'counterculturecoffee.com' },
-      { name: 'Peet\'s Coffee', domain: 'peets.com' },
       { name: 'Verve Coffee Roasters', domain: 'vervecoffee.com' },
-      { name: 'Sightglass Coffee', domain: 'sightglasscoffee.com' },
     ];
   }
   if (cat.includes('leather') || cat.includes('bag') || cat.includes('wallet')) {

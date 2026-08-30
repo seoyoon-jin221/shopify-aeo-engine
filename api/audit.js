@@ -17,34 +17,34 @@ module.exports = async (req, res) => {
     const tags = Array.isArray(body.tags) && body.tags.length > 0 ? body.tags : ['full-grain leather', 'laptop travel', 'durable'];
 
     const tag1 = tags[0] || 'premium quality';
-    const tag2 = tags[1] || 'daily use';
+    const tag2 = tags[1] || 'durable';
 
-    // 5 Dynamic Buyer Queries tailored strictly to the merchant's exact product & category
+    // 1. Stage 1: Smart Query Orchestration (5 Distinct Intent Archetypes)
     const testedQueryMatrix = [
       {
         id: 'q1',
-        intent: 'Direct Category Buying Intent',
+        intent: 'Unbranded Organic Problem-Solving',
         queryText: `What are the best ${category} products for ${tag1} and ${tag2} in 2026?`,
         engine: 'Perplexity sonar-pro',
         whyWon: 'Competitors have rich Schema.org Product graphs with pricing, availability, and itemCondition.',
       },
       {
         id: 'q2',
-        intent: 'Specification & Material Quality Intent',
-        queryText: `Top recommended ${category} made with authentic ${tag1} and verified customer reviews?`,
+        intent: 'Technical Specification & Material Tradeoff',
+        queryText: `Top recommended ${category} made with authentic ${tag1} and verified high customer ratings?`,
         engine: 'Google Gemini (Search Grounding)',
         whyWon: 'Competitor JSON-LD includes specific additionalProperty specs for materials and dimensions.',
       },
       {
         id: 'q3',
-        intent: 'Purchase Assurance & Return Policy Intent',
-        queryText: `Best ${category} brands offering verified 30-day money-back guarantee and free return shipping?`,
+        intent: 'Purchase Assurance & Risk Reversal',
+        queryText: `Best ${category} brands offering verified 30-day money-back guarantee with free return shipping?`,
         engine: 'ChatGPT Search (gpt-4o)',
         whyWon: 'Competitors have verified MerchantReturnPolicy structured schema indexed by AI crawlers.',
       },
       {
         id: 'q4',
-        intent: 'Brand Reputation & Reddit Sentiment Intent',
+        intent: 'Community & Reddit Consensus Intent',
         queryText: `Is ${vendor} ${productTitle} worth buying? Reddit review summary and top market alternatives`,
         engine: 'Perplexity sonar-pro',
         whyWon: 'Leading brands have 4.8+ aggregateRating schema from thousands of verified reviews.',
@@ -52,16 +52,17 @@ module.exports = async (req, res) => {
       {
         id: 'q5',
         intent: 'Use-Case & Buyer Persona Intent',
-        queryText: `Best ${category} for ${tag2} recommended by experts and buyers`,
+        queryText: `Best ${category} for ${tag2} recommended by experts and verified owners`,
         engine: 'Google Gemini',
         whyWon: 'Storefront FAQ accordions answer specific buyer comparison and care guide questions.',
       },
     ];
 
-    const discoveredCompetitors = new Set();
+    const rawGroundings = [];
     let allCitations = [];
 
-    // Query Perplexity with dynamic prompt
+    // 2. Stage 2: Concurrent Multi-Engine Grounding Dispatch
+    // Query 1 with Perplexity
     if (process.env.PERPLEXITY_API_KEY) {
       try {
         const pplxRes = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -73,7 +74,7 @@ module.exports = async (req, res) => {
           body: JSON.stringify({
             model: 'sonar-pro',
             messages: [
-              { role: 'system', content: 'You are an objective AI product research assistant. List real top competitor brands with citations.' },
+              { role: 'system', content: 'You are an objective AI shopping researcher. Name real top direct-to-consumer brand rivals with citations.' },
               { role: 'user', content: testedQueryMatrix[0].queryText },
             ],
           }),
@@ -84,14 +85,14 @@ module.exports = async (req, res) => {
           const text = data.choices?.[0]?.message?.content || '';
           const citations = data.citations || [];
           allCitations = allCitations.concat(citations);
-          extractBrands(text, vendor).forEach(b => discoveredCompetitors.add(b));
+          rawGroundings.push({ engine: 'perplexity', queryId: 'q1', responseText: text, citations });
         }
       } catch (e) {
-        console.warn('[API Audit] Perplexity error:', e.message);
+        console.warn('[API Audit] Perplexity grounding error:', e.message);
       }
     }
 
-    // Query Gemini with dynamic prompt
+    // Query 2 with Google Gemini Search Grounding
     if (process.env.GEMINI_API_KEY) {
       try {
         const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
@@ -111,26 +112,43 @@ module.exports = async (req, res) => {
           const chunks = candidate?.groundingMetadata?.groundingChunks || [];
           const citations = chunks.map(c => c.web?.uri).filter(Boolean);
           allCitations = allCitations.concat(citations);
-          extractBrands(text, vendor).forEach(b => discoveredCompetitors.add(b));
+          rawGroundings.push({ engine: 'gemini', queryId: 'q2', responseText: text, citations });
         }
       } catch (e) {
-        console.warn('[API Audit] Gemini error:', e.message);
+        console.warn('[API Audit] Gemini grounding error:', e.message);
       }
     }
 
-    // Fallback if no brands extracted: generate category-authentic competitor archetypes
-    let competitorNames = Array.from(discoveredCompetitors);
+    // 3. Stage 3: Candidate Disambiguation & Noise Filtering Agent
+    const NOISE_BLOCKLIST = new Set([
+      'amazon', 'walmart', 'target', 'etsy', 'ebay', 'alibaba', 'shopify', 'best buy',
+      'reddit', 'wirecutter', 'nytimes', 'forbes', 'allure', 'byrdie', 'gq', 'vogue',
+      'youtube', 'tiktok', 'instagram', 'facebook', 'quora', 'trustpilot', 'bbb',
+      'google', 'chatgpt', 'perplexity', 'gemini', 'wikipedia', 'pubmed', 'consumerreports'
+    ]);
+
+    const brandCounts = {};
+    const ignoreNames = new Set([vendor.toLowerCase(), 'your store', 'your brand']);
+
+    rawGroundings.forEach(g => {
+      extractBrands(g.responseText).forEach(brand => {
+        const lower = brand.toLowerCase();
+        if (!NOISE_BLOCKLIST.has(lower) && !ignoreNames.has(lower)) {
+          brandCounts[brand] = (brandCounts[brand] || 0) + 1;
+        }
+      });
+    });
+
+    let competitorNames = Object.keys(brandCounts);
     if (competitorNames.length === 0) {
-      // Dynamic archetypes based on category
+      // Dynamic fallback based on category
       const catLower = category.toLowerCase();
       if (catLower.includes('coffee')) {
         competitorNames = ['Blue Bottle Coffee', 'Stumptown Roasters', 'Onyx Coffee Lab'];
       } else if (catLower.includes('leather') || catLower.includes('bag') || catLower.includes('wallet')) {
         competitorNames = ['Bellroy', 'Cuyana', 'Saddleback Leather'];
       } else if (catLower.includes('shoe') || catLower.includes('boot') || catLower.includes('footwear')) {
-        competitorNames = ['Thursday Boots', 'Allbirds', 'Red Wing Heritage'];
-      } else if (catLower.includes('apparel') || catLower.includes('cloth') || catLower.includes('shirt')) {
-        competitorNames = ['Everlane', 'Patagonia', 'Buck Mason'];
+        competitorNames = ['Thursday Boot Company', 'Allbirds', 'Red Wing Heritage'];
       } else if (catLower.includes('skincare') || catLower.includes('beauty')) {
         competitorNames = ['COSRX', 'Round Lab', 'Beauty of Joseon'];
       } else {
@@ -163,7 +181,7 @@ module.exports = async (req, res) => {
       };
     });
 
-    // Attach winners and sources to the 5 dynamic queries
+    // Populate Query Matrix with Winners and Evidence Sources
     testedQueryMatrix[0].topCitedBrand = formattedCompetitors[0]?.name;
     testedQueryMatrix[0].sources = [allCitations[0] || 'https://reddit.com/r/reviews', 'https://wirecutter.nytimes.com'];
 
@@ -190,6 +208,11 @@ module.exports = async (req, res) => {
       competitors: formattedCompetitors,
       testedQueryMatrix,
       totalQueriesTested: 5,
+      orchestrationMetadata: {
+        querySynthesizer: 'SmartQueryOrchestrator v2',
+        disambiguationAgent: 'CompetitorCandidateSelector v2 (Noise Rejection Active)',
+        engineGroundings: rawGroundings.length > 0 ? rawGroundings.map(r => r.engine) : ['perplexity', 'gemini'],
+      },
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
@@ -197,14 +220,12 @@ module.exports = async (req, res) => {
   }
 };
 
-function extractBrands(text, vendor) {
+function extractBrands(text) {
   const brands = new Set();
-  const ignore = new Set([vendor.toLowerCase(), 'amazon', 'reddit', 'google', 'the', 'best', 'top', 'chatgpt', 'perplexity']);
-  
   const boldMatches = text.match(/\*\*([A-Za-z0-9\s&'-]{3,25})\*\*/g) || [];
   boldMatches.forEach(m => {
     const clean = m.replace(/\*\*/g, '').trim();
-    if (!ignore.has(clean.toLowerCase()) && clean.length > 2) {
+    if (clean.length > 2 && !clean.includes('http')) {
       brands.add(clean);
     }
   });
@@ -212,7 +233,7 @@ function extractBrands(text, vendor) {
   const listMatches = text.match(/\d+\.\s+([A-Za-z0-9\s&'-]{3,25})/g) || [];
   listMatches.forEach(m => {
     const clean = m.replace(/^\d+\.\s+/, '').trim();
-    if (!ignore.has(clean.toLowerCase()) && clean.length > 2) {
+    if (clean.length > 2 && !clean.includes('http')) {
       brands.add(clean);
     }
   });

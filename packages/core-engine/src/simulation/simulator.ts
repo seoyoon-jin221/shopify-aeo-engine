@@ -6,6 +6,7 @@ import {
   SimulationResult,
   LLMProvider,
 } from '@shopify-geo/shared-types';
+import { QuotaSentinel } from '../monitoring/quota-sentinel';
 
 export interface LLMSimulationConfig {
   apiKey?: string;
@@ -79,8 +80,8 @@ export class GeoSearchSimulator {
         } else if (this.config.provider === 'openai_search') {
           return await this.callLiveOpenAiApi(apiKey, query, targetProduct);
         }
-      } catch (error) {
-        console.warn(`[GeoSearchSimulator] Live API call failed, falling back to benchmark simulation:`, error);
+      } catch (error: any) {
+        console.warn(`[GeoSearchSimulator] Live API call failed, falling back to benchmark simulation:`, error.message);
       }
     }
 
@@ -118,7 +119,9 @@ export class GeoSearchSimulator {
     });
 
     if (!response.ok) {
-      throw new Error(`Perplexity API HTTP error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text().catch(() => '');
+      await QuotaSentinel.recordApiError('perplexity', response.status, errorText);
+      throw new Error(`Perplexity API Error: ${response.status} ${response.statusText}`);
     }
 
     const data: any = await response.json();
@@ -178,7 +181,9 @@ export class GeoSearchSimulator {
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API HTTP error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text().catch(() => '');
+      await QuotaSentinel.recordApiError('openai', response.status, errorText);
+      throw new Error(`OpenAI API Error: ${response.status} ${response.statusText}`);
     }
 
     const data: any = await response.json();

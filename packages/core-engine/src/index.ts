@@ -4,3 +4,4 @@ export * from './generator/schema-generator';
 export * from './generator/faq-generator';
 export * from './sentinel/drift-sentinel';
 export * from './sentinel/inngest-scheduler';
+export * from './monitoring/quota-sentinel';

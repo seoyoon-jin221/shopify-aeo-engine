@@ -913,20 +913,23 @@
 
     function renderDimensionsGrid(state) {
       const grid = document.getElementById('dimensions-grid');
-      const dimensions = state.dimensions || [
-        { name: 'Direct Commercial Intent', icon: 'fa-cart-shopping', unoptimizedCitationRate: 0, optimizedCitationRate: 95 },
-        { name: 'Material & Tech Specs', icon: 'fa-microchip', unoptimizedCitationRate: 0, optimizedCitationRate: 90 },
-        { name: 'Problem-Solving & Persona', icon: 'fa-user-check', unoptimizedCitationRate: 0, optimizedCitationRate: 95 },
-        { name: 'Assurance & Return Policy', icon: 'fa-shield-halved', unoptimizedCitationRate: 0, optimizedCitationRate: 100 },
-        { name: 'Community & Reddit Consensus', icon: 'fa-comments', unoptimizedCitationRate: 0, optimizedCitationRate: 90 },
-        { name: 'Direct Rival Alternatives', icon: 'fa-arrows-split-up-and-left', unoptimizedCitationRate: 0, optimizedCitationRate: 95 }
+      const dimensions = [
+        { name: 'Direct Commercial Intent', icon: 'fa-cart-shopping', missingCount: 20, protectedCount: isAutoPilotActive ? 20 : 0 },
+        { name: 'Material & Tech Specs', icon: 'fa-microchip', missingCount: 20, protectedCount: isAutoPilotActive ? 20 : 0 },
+        { name: 'Problem-Solving & Persona', icon: 'fa-user-check', missingCount: 20, protectedCount: isAutoPilotActive ? 20 : 0 },
+        { name: 'Assurance & Return Policy', icon: 'fa-shield-halved', missingCount: 20, protectedCount: isAutoPilotActive ? 20 : 0 },
+        { name: 'Community & Reddit Consensus', icon: 'fa-comments', missingCount: 20, protectedCount: isAutoPilotActive ? 20 : 0 },
+        { name: 'Direct Rival Alternatives', icon: 'fa-arrows-split-up-and-left', missingCount: 20, protectedCount: isAutoPilotActive ? 20 : 0 }
       ];
 
       let html = '';
       dimensions.forEach(dim => {
-        const rate = isAutoPilotActive ? dim.optimizedCitationRate : dim.unoptimizedCitationRate;
-        const color = isAutoPilotActive ? 'text-emerald-700' : 'text-amber-700';
-        const barBg = isAutoPilotActive ? 'bg-emerald-500' : 'bg-amber-500';
+        const isProt = isAutoPilotActive;
+        const statusLabel = isProt ? '20/20 Schemas Injected' : '0/20 Unprotected (0% Cited)';
+        const color = isProt ? 'text-emerald-700' : 'text-rose-600';
+        const barBg = isProt ? 'bg-emerald-500' : 'bg-rose-400';
+        const barWidth = isProt ? '100%' : '0%';
+        const subtext = isProt ? '✓ Return & Spec Schema Live on Shopify' : '✕ Missing MerchantReturnPolicy & Specs';
 
         html += `
           <div class="p-3.5 bg-zinc-50 rounded-lg border border-zinc-200 space-y-2">
@@ -935,12 +938,12 @@
                 <i class="fa-solid ${dim.icon} text-zinc-400"></i>
                 <span>${dim.name}</span>
               </span>
-              <span class="font-bold ${color}">${rate}% Structured</span>
+              <span class="font-bold ${color}">${statusLabel}</span>
             </div>
             <div class="w-full bg-zinc-200 rounded-full h-1.5 overflow-hidden">
-              <div class="${barBg} h-1.5 rounded-full progress-smooth" style="width: ${rate}%"></div>
+              <div class="${barBg} h-1.5 rounded-full progress-smooth" style="width: ${barWidth}"></div>
             </div>
-            <span class="text-[10px] text-zinc-400 font-mono-val block">20 Real Evaluated Buyer Queries</span>
+            <span class="text-[10px] ${isProt ? 'text-emerald-800' : 'text-zinc-400'} font-mono-val block">${subtext}</span>
           </div>
         `;
       });
@@ -954,30 +957,9 @@
 
       let rowsHtml = '';
 
-      if (isAutoPilotActive) {
-        // Your store at Rank #1 (Protected)
-        rowsHtml += `
-          <div id="row-your-store" class="py-4 flex items-center justify-between bg-emerald-50/60 -mx-6 px-6 rounded-lg border-l-4 border-l-emerald-600 transition-colors duration-500">
-            <div class="flex items-center space-x-3">
-              <span class="w-7 h-7 rounded-full bg-emerald-600 text-white font-mono-val font-bold flex items-center justify-center text-xs shadow-sm">1</span>
-              <div>
-                <span class="font-bold text-zinc-900 block text-xs flex items-center space-x-1.5">
-                  <span>Your Store: ${cleanShopDomain}</span>
-                  <span class="badge-pill bg-emerald-100 text-emerald-800 text-[10px]">PROTECTED</span>
-                </span>
-                <span class="text-[11px] text-emerald-800 font-mono-val">RAG Schema Injected • 120/120 Queries Structured • Live on Storefront</span>
-              </div>
-            </div>
-            <div class="text-right font-mono-val">
-              <span class="text-sm font-extrabold text-emerald-700">94 / 100</span>
-              <span class="block text-[10px] text-emerald-800 font-semibold uppercase">AI Search Indexing: Active (120 Vectors)</span>
-            </div>
-          </div>
-        `;
-      }
-
+      // Render Competitors 1..10
       competitors.forEach((comp, idx) => {
-        const displayRank = isAutoPilotActive ? idx + 2 : idx + 1;
+        const displayRank = idx + 1;
         const webUrl = comp.websiteUrl || `https://${comp.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
         const shareLabel = comp.citationShareLabel || `(Cited in ${comp.queriesCitedCount || 84} of 120 Queries)`;
 
@@ -1007,10 +989,29 @@
         `;
       });
 
-      if (!isAutoPilotActive) {
-        // Your store at bottom (Unoptimized)
+      // Render Your Store Row
+      if (isAutoPilotActive) {
         rowsHtml += `
-          <div id="row-your-store" class="py-4 flex items-center justify-between -mx-6 px-6 rounded-lg transition-colors duration-500 bg-rose-50/30 border-l-4 border-l-rose-400">
+          <div id="row-your-store" class="py-4 flex items-center justify-between bg-emerald-50/60 -mx-6 px-6 rounded-lg border-l-4 border-l-emerald-600 transition-colors duration-500 mt-2">
+            <div class="flex items-center space-x-3">
+              <span class="w-7 h-7 rounded-full bg-emerald-600 text-white font-mono-val font-bold flex items-center justify-center text-xs shadow-sm">★</span>
+              <div>
+                <span class="font-bold text-zinc-900 block text-xs flex items-center space-x-1.5">
+                  <span>Your Store: ${cleanShopDomain}</span>
+                  <span class="badge-pill bg-emerald-100 text-emerald-800 text-[10px]">OPTIMIZED & PROTECTED</span>
+                </span>
+                <span class="text-[11px] text-emerald-800 font-mono-val">All 120 Buyer Vectors Injected via GraphQL • Next Sentinel Crawl in 6 Days</span>
+              </div>
+            </div>
+            <div class="text-right font-mono-val">
+              <span class="text-sm font-extrabold text-emerald-700">94 / 100 Readiness</span>
+              <span class="block text-[10px] text-emerald-800 font-semibold">Live Citations: 0% Baseline (Crawler Index In-Progress)</span>
+            </div>
+          </div>
+        `;
+      } else {
+        rowsHtml += `
+          <div id="row-your-store" class="py-4 flex items-center justify-between -mx-6 px-6 rounded-lg transition-colors duration-500 bg-rose-50/30 border-l-4 border-l-rose-400 mt-2">
             <div class="flex items-center space-x-3">
               <span class="w-7 h-7 rounded-full bg-rose-100 text-rose-700 font-mono-val font-bold flex items-center justify-center text-xs shadow-sm">11</span>
               <div>
@@ -1022,7 +1023,7 @@
               </div>
             </div>
             <div class="text-right font-mono-val">
-              <span class="text-sm font-bold text-zinc-700">18 / 100</span>
+              <span class="text-sm font-bold text-zinc-700">18 / 100 Readiness</span>
               <span class="block text-[10px] text-zinc-500">Citation Share: <strong>0%</strong> <span class="text-zinc-400">(Cited in 0 of 120 Queries)</span></span>
             </div>
           </div>

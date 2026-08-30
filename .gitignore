@@ -26,3 +26,5 @@ extensions/**/.shopify/
 # Antigravity temporary logs & scratch
 .system_generated/
 scratch/
+.chrome-temp/
+

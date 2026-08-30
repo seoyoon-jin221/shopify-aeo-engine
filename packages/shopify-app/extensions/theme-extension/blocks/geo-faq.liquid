@@ -4,16 +4,16 @@
 {% endcomment %}
 
 {% if product.metafields.geo_engine.faq_data != blank %}
-  <div class="geo-faq-container" style="margin: 2rem 0; padding: 1.5rem; border: 1px solid #e1e3e5; border-radius: 8px; font-family: inherit;">
-    <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;">{{ block.settings.heading | default: "Frequently Asked Questions & AI Search Insights" }}</h3>
-    <div class="geo-faq-list">
+  <div class="geo-faq-container" style="margin: 2.5rem 0; padding: 1.75rem; border: 1px solid #e2e8f0; border-radius: 12px; font-family: inherit; background: #ffffff; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);">
+    <h3 style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-bottom: 1.25rem; letter-spacing: -0.02em;">{{ block.settings.heading | default: "Frequently Asked Questions & AI Search Insights" }}</h3>
+    <div class="geo-faq-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
       {% assign faqs = product.metafields.geo_engine.faq_data.value %}
       {% for item in faqs %}
-        <details style="margin-bottom: 0.75rem; padding: 0.75rem; background-color: #f9fafb; border-radius: 6px; cursor: pointer;">
-          <summary style="font-weight: 500; outline: none; list-style: none;">
-            <strong>Q: {{ item.question }}</strong>
+        <details style="padding: 1rem 1.25rem; background-color: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
+          <summary style="font-weight: 600; color: #1e293b; outline: none; list-style: none; display: flex; align-items: center; justify-content: space-between;">
+            <span>Q: {{ item.question }}</span>
           </summary>
-          <div style="margin-top: 0.5rem; color: #374151; font-size: 0.95rem; line-height: 1.5;">
+          <div style="margin-top: 0.75rem; color: #475569; font-size: 0.9375rem; line-height: 1.6; border-top: 1px solid #f1f5f9; padding-top: 0.75rem;">
             {{ item.answer }}
           </div>
         </details>

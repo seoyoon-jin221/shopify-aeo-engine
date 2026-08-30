@@ -10,4 +10,6 @@ export * from './monitoring/quota-sentinel';
 export * from './storage/db';
 export * from './orchestrator/query-orchestrator';
 export * from './orchestrator/competitor-selector';
+export * from './orchestrator/competitor-dedup';
 export * from './orchestrator/context-extractor';
+export * from './scraper/schema-scraper';

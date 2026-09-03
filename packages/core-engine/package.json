@@ -9,7 +9,7 @@
     "test": "node dist/__tests__/scorer.test.js"
   },
   "dependencies": {
-    "@shopify-geo/shared-types": "*"
+    "@shopify-geo/shared-types": "0.1.0"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

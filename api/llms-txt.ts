@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from './types';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   const shopDomain = req.query.shop as string;

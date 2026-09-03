@@ -1,21 +1,39 @@
 {
-  "name": "shopify-aeo-engine",
-  "version": "1.0.0",
+  "name": "shopify-geo-monorepo",
+  "version": "0.1.0",
   "private": true,
-  "description": "Shopify AEO (Answer Engine Optimization) & GEO Platform",
+  "description": "Shopify AEO (Answer Engine Optimization) & GEO Platform Monorepo",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "tsc --noEmit",
-    "test": "node packages/core-engine/dist/__tests__/scorer.test.js"
+    "build": "npx tsc -p packages/shared-types && npx tsc -p packages/core-engine && npx tsc -p packages/shopify-app",
+    "preview": "node packages/shopify-app/preview-server.js",
+    "test": "node packages/core-engine/dist/__tests__/scorer.test.js",
+    "test:e2e": "npm run build && node packages/core-engine/dist/__tests__/e2e-integration.test.js",
+    "geo:audit": "npm run build && node packages/core-engine/dist/cli/geo-cli.js audit",
+    "geo:sync": "npm run build && node packages/core-engine/dist/cli/geo-cli.js sync",
+    "geo:all": "npm run geo:audit && npm run geo:sync",
+    "store:sync": "npm run build && node packages/shopify-app/dist/cli/live-store-sync.js",
+    "outreach:generate": "npm run build && node packages/core-engine/dist/demo/generate-cold-audits.js",
+    "dev:shopify": "npm run dev --workspace=@shopify-geo/shopify-app",
+    "dev:core": "npx tsc -p packages/core-engine --watch"
   },
+  "keywords": [
+    "shopify",
+    "aeo",
+    "answer-engine-optimization",
+    "geo",
+    "chatgpt-search",
+    "perplexity",
+    "ai-seo"
+  ],
+  "author": "Antigravity Pair Programmer",
+  "license": "UNLICENSED",
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@vercel/node": "^12.0.0",
     "typescript": "^5.4.5"
-  },
-  "engines": {
-    "node": "24.x"
   }
 }

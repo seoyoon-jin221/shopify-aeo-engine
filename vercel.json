@@ -1,6 +1,4 @@
 {
-  "installCommand": "env -u VERSION -u NPM_VERSION -u NODE_VERSION -u NPM_FLAGS -u npm_config_version -u NPM_CONFIG_VERSION npm install",
-  "buildCommand": "npm run build",
   "headers": [
     {
       "source": "/(.*)",

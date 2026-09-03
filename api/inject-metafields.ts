@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from './types';
 
 function parseRefundPolicy(bodyHtml: string) {
   if (!bodyHtml) return null;
